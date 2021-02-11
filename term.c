@@ -29,19 +29,30 @@ int term_alloc(struct term **dst)
 
 int term_init(struct term *term)
 {
-	/* FIXME: Error handling */
-	initscr();
-	raw();
-	noecho();
-	refresh();
+	int err;
 
-	return(0);
+	if(!initscr()) {
+		err = -EFAULT;
+	} else if(raw() != OK) {
+		err = -EIO;
+	} else if(noecho() != OK) {
+		err = -EIO;
+	} else {
+		err = 0;
+	}
+
+	if(err < 0 && err != -EFAULT) {
+		endwin();
+	}
+
+	return(err);
 }
 
 int term_fini(struct term *term)
 {
-	/* FIXME: Error handling */
-	endwin();
+	if(endwin() != OK) {
+		return(-EIO);
+	}
 
 	return(0);
 }
