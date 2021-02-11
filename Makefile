@@ -1,4 +1,4 @@
-OBJECTS = main.o term.o
+OBJECTS = main.o term.o config.o
 OUTPUT = e
 PHONY = clean
 
