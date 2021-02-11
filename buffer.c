@@ -131,3 +131,8 @@ int buffer_append(struct buffer *buffer, char chr)
 
 	return(0);
 }
+
+const char* buffer_get_data(struct buffer *buffer)
+{
+	return(buffer->data);
+}

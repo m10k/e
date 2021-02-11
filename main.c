@@ -1,9 +1,9 @@
-#include <termios.h>
 #include <unistd.h>
 #include <errno.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#include <ncurses.h>
 #include "term.h"
 #include "buffer.h"
 
@@ -38,25 +38,28 @@ int main(int argc, char *argv[])
 		return(1);
 	}
 
+	printw("%s", buffer_get_data(buffer));
+	refresh();
+
 	while(read(STDIN_FILENO, &c, 1) == 1) {
 		if(iscntrl(c)) {
 			if(c == 17) {
 				break;
-			}
-
-			if(c == 19) {
+			} else if(c == 19) {
 				buffer_save(buffer);
-			}
-
-			if(c == 13) {
+			} else if(c == 13) {
 				buffer_append(buffer, '\n');
+				printw("\n");
+			} else {
+				printw("\\%d", c);
 			}
 
-			printf("%d\r\n", c);
+			refresh();
 		} else {
 			buffer_append(buffer, c);
-			printf("%c", c);
-			/* printf("%d (%c)\r\n", c, c); */
+
+			printw("%c", c);
+			refresh();
 		}
 	}
 
