@@ -1,4 +1,4 @@
-OBJECTS = main.o term.o config.o file.o buffer.o
+OBJECTS = main.o term.o config.o file.o buffer.o telex.o
 OUTPUT = e
 PHONY = clean
 
