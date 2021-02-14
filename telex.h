@@ -1,12 +1,14 @@
 #ifndef E_TELEX_H
 #define E_TELEX_H
 
+#include "string.h"
+
 typedef enum {
 	TELEX_INVALID = 0,
         TELEX_NONE,
 	TELEX_LINE,
 	TELEX_REGEX,
-	TELEX_OFFSET
+	TELEX_COLUMN
 } telex_type_t;
 
 struct telex {
@@ -15,11 +17,12 @@ struct telex {
 	int direction;
 
 	union {
-		long line;
-		long offset;
-		char *regex;
-		long error;
+		long number;
+	        struct string *regex;
 	} data;
 };
+
+int telex_parse(const char *str, struct telex **telex, const char **err_ptr);
+int telex_free(struct telex **telex);
 
 #endif /* E_TELEX_H */
