@@ -1,4 +1,4 @@
-OBJECTS = main.o term.o config.o file.o buffer.o telex.o
+OBJECTS = main.o term.o config.o file.o buffer.o telex.o string.o
 OUTPUT = e
 PHONY = clean
 
@@ -7,6 +7,11 @@ LIBS = -lncurses
 
 all: $(OUTPUT)
 
+uitest: ui.o string.o window.o cmdbox.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
+
+telex: telex.o file.o string.o config.o telex_text.o
+	$(CC) $(CFLAGS) -o $@ $^
 clean:
 	rm -rf $(OBJECTS) $(OUTPUT)
 
