@@ -7,11 +7,25 @@
 #include "buffer.h"
 #include "file.h"
 #include "config.h"
+#include "telex.h"
 
 struct buffer {
 	struct file *file;
 	char *data;
 	size_t size;
+};
+
+struct line {
+	struct line *next;
+	int no;
+	char *data;
+	size_t len;
+};
+
+struct snippet {
+	struct line *first_line;
+	struct line *last_line;
+	size_t lines;
 };
 
 static int _buffer_new(struct buffer **buffer)
@@ -135,4 +149,274 @@ int buffer_append(struct buffer *buffer, char chr)
 const char* buffer_get_data(struct buffer *buffer)
 {
 	return(buffer->data);
+}
+
+static int _get_snippet_extent(struct buffer *buffer, const int start, const int lines,
+			       const char **snip_start, const char **snip_end)
+{
+	struct telex pos_start = {
+		.next = NULL,
+		.type = TELEX_LINE,
+		.direction = 0,
+		.data.number = start
+	};
+	struct telex pos_end = {
+		.next = NULL,
+		.type = TELEX_LINE,
+		.direction = 1,
+		.data.number = lines
+	};
+
+	const char *start_ptr;
+	const char *end_ptr;
+
+	if(!buffer || !snip_start || !snip_end) {
+		return(-EINVAL);
+	}
+
+	start_ptr = telex_lookup(&pos_start, buffer->data, buffer->size, buffer->data);
+
+	if(!start_ptr) {
+		return(-ERANGE);
+	}
+
+	end_ptr = telex_lookup(&pos_end, buffer->data, buffer->size, start_ptr);
+
+	if(!end_ptr) {
+		/*
+		 * The specified line is behind the end of the buffer, so we
+		 * limit the snipped to the end of the buffer.
+		 */
+		end_ptr = buffer->data + buffer->size;
+	}
+
+	*snip_start = start_ptr;
+	*snip_end = end_ptr;
+
+	return(0);
+}
+
+int snippet_new(struct snippet **snippet)
+{
+	struct snippet *snip;
+
+	if(!snippet) {
+		return(-EINVAL);
+	}
+
+	snip = malloc(sizeof(*snip));
+
+	if(!snip) {
+		return(-ENOMEM);
+	}
+
+	memset(snip, 0, sizeof(*snip));
+	*snippet = snip;
+
+	return(0);
+}
+
+int snippet_append_line(struct snippet *snippet, struct line *line)
+{
+	if(!snippet || !line) {
+		return(-EINVAL);
+	}
+
+	if(!snippet->first_line) {
+		snippet->first_line = line;
+	} else {
+		snippet->last_line->next = line;
+	}
+	snippet->last_line = line;
+	snippet->lines++;
+	line->next = NULL;
+
+	return(0);
+}
+
+struct line* snippet_get_first_line(struct snippet *snippet)
+{
+	return(snippet ? snippet->first_line : NULL);
+}
+
+int snippet_new_from_string(struct snippet **snippet, const char *str,
+			    const size_t len, const int first_line)
+{
+	struct snippet *snip;
+	const char *pos;
+	int cur_line;
+
+	if(!snippet || !str) {
+		return(-EINVAL);
+	}
+
+	if(snippet_new(&snip) < 0) {
+		return(-ENOMEM);
+	}
+
+	pos = str;
+	cur_line = first_line;
+
+	while(pos < str + len && *pos) {
+		struct line *line;
+
+		if(line_new(&line, cur_line, pos) < 0) {
+			break;
+		}
+
+		if(snippet_append_line(snip, line) < 0) {
+			line_free(&line);
+			break;
+		}
+
+		pos += line_get_length(line) + 1;
+		cur_line++;
+	}
+
+	*snippet = snip;
+	return(0);
+}
+
+int snippet_free(struct snippet **snippet)
+{
+	struct line *line;
+
+	if(!snippet || !*snippet) {
+		return(-EINVAL);
+	}
+
+	while((*snippet)->first_line) {
+		line = (*snippet)->first_line;
+		(*snippet)->first_line = line->next;
+
+		line_free(&line);
+	}
+
+	free(*snippet);
+	*snippet = NULL;
+
+	return(0);
+}
+
+int buffer_get_snippet(struct buffer *buffer, const int start, const int lines,
+		       struct snippet **snippet)
+{
+	struct snippet *snip;
+	const char *snip_start;
+	const char *snip_end;
+	int err;
+
+	err = _get_snippet_extent(buffer, start, lines, &snip_start, &snip_end);
+
+	if(err < 0) {
+		return(err);
+	}
+
+	err = snippet_new_from_string(&snip, snip_start, snip_end - snip_start, start);
+
+	if(err < 0) {
+		return(err);
+	}
+
+	*snippet = snip;
+
+	return(0);
+}
+
+static int _linelen(const char *str)
+{
+	int n;
+
+	if(!str) {
+		return(-EINVAL);
+	}
+
+	n = 0;
+
+	while(*str && *str != '\n') {
+		n++;
+		str++;
+	}
+
+	return(n);
+}
+
+int line_new(struct line **line, int no, const char *str)
+{
+	struct line *l;
+	int len;
+
+	if(!line || !str) {
+		return(-EINVAL);
+	}
+
+	l = malloc(sizeof(*l));
+
+	if(!l) {
+		return(-ENOMEM);
+	}
+
+	len = _linelen(str);
+	l->data = malloc(len + 1);
+
+	if(!l->data) {
+		free(l);
+		return(-ENOMEM);
+	}
+
+	memcpy(l->data, str, len);
+	l->data[len] = 0;
+	l->no = no;
+	l->len = len;
+
+	*line = l;
+
+	return(0);
+}
+
+int line_free(struct line **line)
+{
+	if(!line || !*line) {
+		return(-EINVAL);
+	}
+
+	if((*line)->data) {
+		free((*line)->data);
+	}
+	free(*line);
+
+	*line = NULL;
+	return(0);
+}
+
+int line_get_number(struct line *line)
+{
+	if(!line) {
+		return(-EINVAL);
+	}
+
+	return(line->no);
+}
+
+const char* line_get_data(struct line *line)
+{
+	if(!line) {
+		return(NULL);
+	}
+
+	return(line->data);
+}
+
+int line_get_length(struct line *line)
+{
+	if(!line) {
+		return(-EINVAL);
+	}
+
+	return(line->len);
+}
+
+struct line* line_get_next(struct line *line)
+{
+	return(line ? line->next : NULL);
 }

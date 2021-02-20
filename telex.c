@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "telex.h"
 #include "string.h"
+#include "file.h"
 
 /*
  * Text Location Expressions
@@ -174,7 +175,7 @@ static int _expr_append_char(struct telex *expr, const char chr)
 		return(-ENOMEM);
 	}
 
-	if(string_append_char(expr->data.regex, chr) < 0) {
+	if(string_insert_char(expr->data.regex, -1, chr) < 0) {
 		return(-ENOMEM);
 	}
 
@@ -285,7 +286,7 @@ int telex_parse(const char *str, struct telex **telex, const char **err_ptr)
 	cur_pos = str;
 	num_exprs = 0;
 
-	if(!str || !dst) {
+	if(!str || !telex) {
 		return(-EINVAL);
 	}
 
@@ -332,7 +333,6 @@ int telex_parse(const char *str, struct telex **telex, const char **err_ptr)
 	return(err);
 }
 
-#if 0
 const char *telex_type_str(telex_type_t type)
 {
 	static const char *_telex_type_strs[] = {
@@ -351,7 +351,8 @@ const char *telex_type_str(telex_type_t type)
 	return(_telex_type_strs[type]);
 }
 
-int telex_dbg(struct telex *expr, int depth)
+#ifdef TELEX_DEBUG
+int telex_debug(struct telex *expr, int depth)
 {
 	char *spacing;
 
@@ -372,46 +373,137 @@ int telex_dbg(struct telex *expr, int depth)
 	switch(expr->type) {
 	case TELEX_LINE:
 	case TELEX_COLUMN:
-		printf("%snumber=%d\n", spacing, expr->data.number);
+		printf("%snumber=%lu\n", spacing, expr->data.number);
 		break;
 
 	case TELEX_REGEX:
 		printf("%sregex=%s\n", spacing, string_get_data(expr->data.regex));
+		break;
+
+	case TELEX_INVALID:
+	case TELEX_NONE:
+		printf("%s[INVALID]\n", spacing);
 		break;
 	}
 
 	free(spacing);
 
 	if(expr->next) {
-		telex_dbg(expr->next, depth + 1);
+		telex_debug(expr->next, depth + 1);
 	}
 
 	free(expr);
 	return(0);
 }
+#endif /* TELEX_DEBUG */
 
-int main(int argc, char *argv[])
+static const char *rstrchr(const char *base, const char *start, const char chr)
 {
-	int i;
-
-	for(i = 1; i < argc; i++) {
-		struct telex *exprs;
-		int num_exprs;
-
-		exprs = NULL;
-
-		num_exprs = telex_parse(argv[i], &exprs);
-
-		if(num_exprs < 0) {
-			printf("telex_parse: %s\n", strerror(-num_exprs));
-			continue;
+	while(start >= base) {
+		if(*start == chr) {
+			return(start);
 		}
 
-		if(num_exprs > 0) {
-			telex_dbg(exprs, 0);
-		}
+		start--;
 	}
 
-	return(0);
+	return(NULL);
 }
-#endif /* 0 */
+
+static const char* _telex_lookup_line(struct telex *telex, const char *start,
+				      const size_t size, const char *pos)
+{
+	const char *cur;
+	long remaining;
+
+	remaining = telex->data.number;
+	cur = pos;
+
+	if(telex->direction == 0 &&
+	   telex->data.number == 0) {
+		cur = start + size;
+		telex->direction = -1;
+		telex->data.number = 1;
+	}
+
+	if(telex->direction == 0) {
+		cur = start;
+
+		while(--remaining > 0) {
+			cur = strchr(cur, '\n');
+
+			if(!cur) {
+				return(NULL);
+			}
+
+			cur++;
+		}
+	} else if(telex->direction > 0) {
+		while(remaining-- > 0) {
+			cur = strchr(cur, '\n');
+
+			if(!cur) {
+				return(NULL);
+			}
+
+			cur++;
+		}
+	} else { /* direction < 0 */
+		while(remaining-- >= 0) {
+			cur = rstrchr(start, cur, '\n');
+
+			if(!cur) {
+				return(NULL);
+			}
+
+			cur--;
+		}
+
+		cur += 2;
+	}
+
+	return(cur);
+}
+
+static const char* _telex_lookup_regex(struct telex *telex, const char *start,
+				       const size_t size, const char *pos)
+{
+	return(NULL);
+}
+
+static const char* _telex_lookup_column(struct telex *telex, const char *start,
+					const size_t size, const char *pos)
+{
+	return(NULL);
+}
+
+const char* telex_lookup(struct telex *telex, const char *start,
+			 const size_t size, const char *pos)
+{
+	const char *cur_pos;
+
+	for(cur_pos = pos; telex; telex = telex->next) {
+		const char *new_pos;
+
+		switch(telex->type) {
+		case TELEX_LINE:
+			new_pos = _telex_lookup_line(telex, start, size, cur_pos);
+			break;
+
+		case TELEX_REGEX:
+			new_pos = _telex_lookup_regex(telex, start, size, cur_pos);
+			break;
+
+		case TELEX_COLUMN:
+			new_pos = _telex_lookup_column(telex, start, size, cur_pos);
+			break;
+
+		default:
+			return(NULL);
+		}
+
+		cur_pos = new_pos;
+	}
+
+	return(cur_pos);
+}
