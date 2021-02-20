@@ -1,3 +1,7 @@
+#include <stdio.h>
+#include "file.h"
+#include "telex.h"
+
 int test(const char *path, const char *cmd,
          const char *arg0, const char *arg1)
 {

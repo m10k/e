@@ -25,6 +25,9 @@ struct telex {
 int telex_parse(const char *str, struct telex **telex, const char **err_ptr);
 int telex_free(struct telex **telex);
 
+const char* telex_lookup(struct telex *telex, const char *start,
+			 const size_t size, const char *pos);
+
 #ifdef TELEX_DEBUG
 int telex_debug(struct telex *expr, int depth)
 #endif /* TELEX_DEBUG */

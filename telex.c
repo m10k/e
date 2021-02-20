@@ -474,16 +474,6 @@ static const char* _telex_lookup_regex(struct telex *telex, const char *start,
 static const char* _telex_lookup_column(struct telex *telex, const char *start,
 					const size_t size, const char *pos)
 {
-	const char *cur;
-	const char *lim;
-	long remaining;
-	int step;
-
-	step = telex->direction;
-	remaining = telex->data.number;
-	lim = (telex->direction > 0) ? start + size : start - 1;
-	cur = pos;
-
 	return(NULL);
 }
 
