@@ -30,6 +30,7 @@ static int _key_handler_single(struct cmdbox *box, const int key)
 	fprintf(stderr, "S[%d]\n", key);
 
 	switch(key) {
+#if 0
 	case 0: /* ^2, ^@ */
 	case 17: /* ^Q */
 	case 23: /* ^W */
@@ -72,7 +73,7 @@ static int _key_handler_single(struct cmdbox *box, const int key)
 	case 127: /* ^? */
 	case 30:  /* ^^ */
 
-
+#endif
 
 
 	case 127:
