@@ -43,8 +43,12 @@ struct textview;
 #define widget_redraw(w)  ((w)->redraw((w)))
 #define widget_free(w)    ((w)->free((w)))
 #define widget_set_size(widget,w,h) do {	\
-		((widget))->width = (w);	\
-		((widget))->height = (h);	\
+		(widget)->width = (w);	\
+		(widget)->height = (h);	\
+	} while(0);
+#define widget_set_position(widget,_x,_y) do {	\
+		(widget)->x = (_x);		\
+		(widget)->y = (_y);		\
 	} while(0);
 
 

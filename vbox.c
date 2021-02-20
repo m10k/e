@@ -46,9 +46,11 @@ static int _vbox_resize(struct widget *widget)
 		int rem_height;
 		int rem_children;
 		int slot;
+		int y;
 
 		rem_height = widget->height;
 		rem_children = vbox->num_children;
+		y = 0;
 
 		for(slot = 0; slot < vbox->max_children; slot++) {
 			int height;
@@ -63,12 +65,14 @@ static int _vbox_resize(struct widget *widget)
 			 */
 			height = rem_height / rem_children;
 
+			widget_set_position(vbox->children[slot], 0, y);
 			widget_set_size(vbox->children[slot],
 					widget->width, height);
 			widget_resize(vbox->children[slot]);
 
 			rem_height -= height;
 			rem_children--;
+			y += height;
 		}
 	}
 
