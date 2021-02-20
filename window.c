@@ -5,7 +5,7 @@
 #include "ui.h"
 
 struct window {
-	struct widget _parent;
+	struct container _parent;
 
 	WINDOW *window;
 	struct widget *child;
@@ -90,6 +90,29 @@ int _window_free(struct widget *widget)
 	return(0);
 }
 
+int _window_add(struct container *container, struct widget *child)
+{
+	struct window *window;
+
+	if(!container || !child) {
+		return(-EINVAL);
+	}
+
+	window = (struct window*)container;
+
+	if(window->child || child->parent) {
+		return(-EALREADY);
+	}
+
+	child->parent = (struct widget*)window;
+	child->window = window->window;
+
+	window->child = child;
+	widget_resize((struct widget*)window);
+
+	return(0);
+}
+
 static int _initialize_curses(void)
 {
 	static int _initialized = 0;
@@ -147,28 +170,10 @@ int window_new(struct window **window)
 	((struct widget*)wind)->redraw = _window_redraw;
 	((struct widget*)wind)->free = _window_free;
 
+	((struct container*)wind)->add = _window_add;
+
 	wind->window = stdscr;
 	*window = wind;
-
-	return(0);
-}
-
-int window_set_child(struct window *window, struct widget *child)
-{
-	if(!window || !child) {
-		return(-EINVAL);
-	}
-
-	if(window->child || child->parent) {
-		return(-EALREADY);
-	}
-
-	child->parent = (struct widget*)window;
-	child->window = window->window;
-
-	window->child = child;
-	widget_resize((struct widget*)window);
-
 
 	return(0);
 }

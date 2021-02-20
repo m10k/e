@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 	assert(textview_set_buffer(textview, buffer) == 0);
 	textview_set_selection(textview, start, end);
 
-	assert(window_set_child(window, (struct widget*)textview) == 0);
+	assert(container_add((struct container*)window, (struct widget*)textview) == 0);
 
 	widget_redraw((struct widget*)window);
 

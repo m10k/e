@@ -46,8 +46,6 @@ struct textview;
 #define container_add(c,w) ((c)->add((c), (w)))
 
 int window_new(struct window **window);
-int window_set_child(struct window *window, struct widget *child);
-
 int cmdbox_new(struct cmdbox **cmdbox);
 int vbox_new(struct vbox **vbox);
 int textview_new(struct textview **textview);
