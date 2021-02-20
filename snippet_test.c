@@ -94,6 +94,8 @@ int test(const char *path, const char *start_expr, const char *end_expr)
 		printf("%04d: %s\n", line_get_number(line), line_get_data(line));
 	}
 
+	snippet_free(&snip);
+
         return(0);
 }
 

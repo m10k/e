@@ -279,8 +279,17 @@ int snippet_new_from_string(struct snippet **snippet, const char *str,
 
 int snippet_free(struct snippet **snippet)
 {
-	if(!snippet) {
+	struct line *line;
+
+	if(!snippet || !*snippet) {
 		return(-EINVAL);
+	}
+
+	while((*snippet)->first_line) {
+		line = (*snippet)->first_line;
+		(*snippet)->first_line = line->next;
+
+		line_free(&line);
 	}
 
 	free(*snippet);
