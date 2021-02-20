@@ -10,6 +10,9 @@ all: $(OUTPUT)
 uitest: ui.o string.o window.o cmdbox.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
+textview: config.o textview.o window.o textview_test.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
+
 clean:
 	rm -rf $(OBJECTS) $(OUTPUT)
 
