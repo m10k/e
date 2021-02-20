@@ -323,6 +323,62 @@ int buffer_get_snippet(struct buffer *buffer, const int start, const int lines,
 	return(0);
 }
 
+int buffer_get_line_at(struct buffer *buffer, const char *pos)
+{
+	const char *cur;
+	int line;
+
+	if(pos < buffer->data || pos > buffer->data + buffer->size) {
+		return(-ERANGE);
+	}
+
+	for(line = 1, cur = buffer->data; *cur && cur < pos; cur++) {
+		if(*cur == '\n') {
+			line++;
+		}
+	}
+
+	return(line);
+}
+
+int buffer_get_snippet_telex(struct buffer *buffer, struct telex *start, struct telex *end,
+			     struct snippet **snippet)
+{
+	const char *start_pos;
+	const char *end_pos;
+	int start_line;
+	int end_line;
+
+	/* end may be NULL */
+	if(!buffer || !start || !snippet) {
+		return(-EINVAL);
+	}
+
+	end_pos = NULL;
+	start_pos = telex_lookup(start, buffer->data, buffer->size, buffer->data);
+
+	if(!start_pos) {
+		return(-ERANGE);
+	}
+
+	if(end) {
+		end_pos = telex_lookup(end, buffer->data, buffer->size, start_pos);
+	}
+
+	if(!end_pos) {
+		end_pos = buffer->data + buffer->size;
+	}
+
+	start_line = buffer_get_line_at(buffer, start_pos);
+	end_line = buffer_get_line_at(buffer, end_pos);
+
+	if(start_line <= 0 || end_line <= 0) {
+		return(-ERANGE);
+	}
+
+	return(buffer_get_snippet(buffer, start_line, end_line - start_line + 1, snippet));
+}
+
 static int _linelen(const char *str)
 {
 	int n;
