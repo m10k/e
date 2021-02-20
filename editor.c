@@ -51,6 +51,30 @@ static int _editor_init_ui(struct editor *editor)
 
 int editor_open(struct editor *editor, const char *path)
 {
+	int err;
+
+	if(!editor || !path) {
+		return(-EINVAL);
+	}
+
+	if(editor->prebuffer) {
+		return(-EALREADY);
+	}
+
+	err = buffer_open(&(editor->prebuffer), path);
+
+	if(err < 0) {
+		return(err);
+	}
+
+	err = textview_set_buffer(editor->preedit, editor->prebuffer);
+
+	if(err < 0) {
+		return(err);
+	}
+
+	widget_redraw((struct widget*)editor->window);
+
 	return(0);
 }
 
