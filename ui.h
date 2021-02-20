@@ -42,12 +42,17 @@ struct textview;
 #define widget_resize(w)  ((w)->resize((w)))
 #define widget_redraw(w)  ((w)->redraw((w)))
 #define widget_free(w)    ((w)->free((w)))
+#define widget_set_size(widget,w,h) do {	\
+		((widget))->width = (w);	\
+		((widget))->height = (h);	\
+	} while(0);
+
 
 #define container_add(c,w) ((c)->add((c), (w)))
 
 int window_new(struct window **window);
 int cmdbox_new(struct cmdbox **cmdbox);
-int vbox_new(struct vbox **vbox);
+int vbox_new(struct vbox **vbox, int size);
 int textview_new(struct textview **textview);
 
 int textview_set_buffer(struct textview *textview, struct buffer *buffer);
