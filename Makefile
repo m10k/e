@@ -10,7 +10,7 @@ all: $(OUTPUT)
 uitest: ui.o string.o window.o cmdbox.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
-textview: config.o textview.o window.o textview_test.o
+textview: config.o string.o telex.o file.o config.o textview.o window.o buffer.o textview_test.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
 telex: telex.o file.o string.o config.o telex_test.o

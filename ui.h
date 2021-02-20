@@ -2,6 +2,7 @@
 #define E_UI_H
 
 #include <ncurses.h>
+#include "buffer.h"
 
 typedef enum {
 	UI_ATTR_HEXPAND = (1 << 0),
@@ -49,6 +50,9 @@ int window_set_child(struct window *window, struct widget *child);
 
 int cmdbox_new(struct cmdbox **cmdbox);
 int vbox_new(struct vbox **vbox);
-int textview_new(struct textview**);
+int textview_new(struct textview **textview);
+
+int textview_set_buffer(struct textview *textview, struct buffer *buffer);
+int textview_set_selection(struct textview *textview, struct telex *start, struct telex *end);
 
 #endif /* E_UI_H */
