@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 #include "ui.h"
 #include "buffer.h"
 #include "telex.h"
@@ -11,7 +12,6 @@ struct textview {
 	struct buffer *buffer;
 	struct telex *start;
 	struct telex *end;
-/*	struct selection selection; */
 };
 
 static int _number_width(int number)
@@ -45,6 +45,8 @@ static int _textview_draw_line(struct textview *textview, const int y, struct li
 	int lineno_width;
 	int text_width;
 	int remaining;
+	int hl_start;
+	int hl_end;
 	const char *linepos;
 
 	widget = (struct widget*)textview;
@@ -71,6 +73,38 @@ static int _textview_draw_line(struct textview *textview, const int y, struct li
 		abs_y++;
 	}
 
+	if(line_get_highlight(line, &hl_start, &hl_end) == 0) {
+		abs_y = widget->y + y;
+		remaining = line_get_length(line);
+
+		if(hl_start == 0) {
+			hl_start = remaining;
+		} else {
+			hl_start--;
+		}
+
+		if(hl_end == 0) {
+			hl_end = INT_MAX;
+		} else {
+			hl_end--;
+		}
+
+		while(remaining >= 0) {
+			if(hl_start < text_width) {
+				mvchgat(abs_y, abs_x + lineno_width + 1 + hl_start,
+					hl_end > text_width ? -1 : hl_end, 0,
+					UI_COLOR_SELECTION, NULL);
+			} else {
+				mvchgat(abs_y, abs_x + lineno_width + 1, hl_end, 0,
+					UI_COLOR_SELECTION, NULL);
+			}
+
+			hl_start -= remaining;
+			hl_end -= remaining;
+			remaining -= text_width;
+		}
+	}
+
 	return(0);
 }
 
@@ -89,12 +123,16 @@ static int _textview_redraw(struct widget *widget)
 
 	textview = (struct textview*)widget;
 	max_lines = widget->height;
+	y = 0;
 
 	/* FIXME: clear textview */
 
 	if(textview->start) {
 		err = buffer_get_snippet_telex(textview->buffer,
-					       textview->start, textview->end, &snip);
+					       textview->start,
+					       textview->end,
+					       max_lines,
+					       &snip);
 	} else {
 		err = buffer_get_snippet(textview->buffer, 1, max_lines, &snip);
 	}
@@ -103,7 +141,7 @@ static int _textview_redraw(struct widget *widget)
 		return(err);
 	}
 
-	for(y = 0, line = snippet_get_first_line(snip); line; line = line_get_next(line), y++) {
+	for(line = snippet_get_first_line(snip); line; line = line_get_next(line), y++) {
 		_textview_draw_line(textview, y, line);
 	}
 
