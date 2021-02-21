@@ -133,6 +133,12 @@ static int _initialize_curses(void)
 	} else {
 		err = 0;
 		_initialized = 1;
+
+		init_pair(UI_COLOR_NORMAL, COLOR_BLACK, COLOR_WHITE);
+		init_pair(UI_COLOR_LINES, COLOR_WHITE, COLOR_BLUE);
+		init_pair(UI_COLOR_SELECTION, COLOR_BLUE, COLOR_WHITE);
+		init_pair(UI_COLOR_DELETION, COLOR_RED, COLOR_WHITE);
+		init_pair(UI_COLOR_INSERTION, COLOR_GREEN, COLOR_WHITE);
 	}
 
 	if(err < 0 && err != -EFAULT) {

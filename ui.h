@@ -5,6 +5,15 @@
 #include "buffer.h"
 
 typedef enum {
+	UI_COLOR_DEFAULT = 0,
+	UI_COLOR_NORMAL,
+	UI_COLOR_LINES,
+	UI_COLOR_SELECTION,
+	UI_COLOR_DELETION,
+	UI_COLOR_INSERTION
+} ui_color_t;
+
+typedef enum {
 	UI_ATTR_HEXPAND = (1 << 0),
 	UI_ATTR_VEXPAND = (1 << 1),
 	UI_ATTR_EXPAND  = (UI_ATTR_HEXPAND | UI_ATTR_VEXPAND)
