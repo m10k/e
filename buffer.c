@@ -393,7 +393,7 @@ int buffer_get_col_at(struct buffer *buffer, const char *pos)
 		return(-ERANGE);
 	}
 
-	for(col = 1, cur = pos; cur >= buffer->data && *cur != '\n'; cur--) {
+	for(col = 0, cur = pos; cur >= buffer->data && *cur != '\n'; cur--) {
 		col++;
 	}
 
