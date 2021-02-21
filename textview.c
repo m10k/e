@@ -52,19 +52,19 @@ static int _textview_draw_line(struct textview *textview, const int y, struct li
 	abs_x = widget->x;
 	abs_y = widget->y + y;
 	lineno = line_get_number(line);
-	lineno_width = _number_width(lineno);
-
-	if(lineno_width < 4) {
-		lineno_width = 4;
-	}
+	/* width of the last line number to be displayed */
+	lineno_width = _number_width(lineno + widget->height - y);
 	text_width = widget->width - lineno_width - 1;
 
 	remaining = line_get_length(line);
 	linepos = line_get_data(line);
 
 	while(remaining >= 0) {
-		mvprintw(abs_y, abs_x, "%*d ", lineno_width, lineno);
+		mvprintw(abs_y, abs_x, "%*d", lineno_width, lineno);
+		mvchgat(abs_y, abs_x, lineno_width + 1, 0, UI_COLOR_LINES, NULL);
+
 		mvprintw(abs_y, abs_x + lineno_width + 1, "%.*s", text_width, linepos);
+		mvchgat(abs_y, abs_x + lineno_width + 1, -1, 0, UI_COLOR_NORMAL, NULL);
 
 		linepos += text_width;
 		remaining -= text_width;
