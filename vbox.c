@@ -50,12 +50,34 @@ static int _vbox_resize(struct widget *widget)
 
 		rem_height = widget->height;
 		rem_children = vbox->num_children;
-		y = 0;
 
+		/* subtract the size required for non-expanding children */
 		for(slot = 0; slot < vbox->max_children; slot++) {
+			struct widget *child;
+
+			child = vbox->children[slot];
+
+			if(!child) {
+				continue;
+			}
+
+			if(!(child->attrs & UI_ATTR_VEXPAND)) {
+				rem_height -= child->height;
+				rem_children--;
+			}
+
+			/* set the correct width, however */
+			child->width = widget->width;
+		}
+
+		/* calculate the size of expanding children */
+		for(slot = 0; slot < vbox->max_children && rem_children > 0; slot++) {
+			struct widget *child;
 			int height;
 
-			if(!vbox->children[slot]) {
+			child = vbox->children[slot];
+
+			if(!child) {
 				continue;
 			}
 
@@ -65,14 +87,26 @@ static int _vbox_resize(struct widget *widget)
 			 */
 			height = rem_height / rem_children;
 
-			widget_set_position(vbox->children[slot], 0, y);
-			widget_set_size(vbox->children[slot],
-					widget->width, height);
-			widget_resize(vbox->children[slot]);
+			widget_set_size(child, widget->width, height);
 
 			rem_height -= height;
 			rem_children--;
-			y += height;
+		}
+
+		/* adjust the y-position of all children */
+		for(y = 0, slot = 0; slot < vbox->max_children; slot++) {
+			struct widget *child;
+
+			child = vbox->children[slot];
+
+			if(!child) {
+				continue;
+			}
+
+			widget_set_position(child, 0, y);
+			widget_resize(child);
+
+			y += child->height;
 		}
 	}
 
