@@ -474,7 +474,44 @@ static const char* _telex_lookup_regex(struct telex *telex, const char *start,
 static const char* _telex_lookup_column(struct telex *telex, const char *start,
 					const size_t size, const char *pos)
 {
-	return(NULL);
+	long remaining;
+	const char *cur;
+
+	cur = pos;
+
+	if(telex->direction == 0) {
+		if(!telex->data.number) {
+			while(*cur && *cur != '\n') {
+				cur++;
+			}
+		} else {
+			for(remaining = telex->data.number; remaining > 1; remaining--) {
+				if(!*cur || *cur == '\n') {
+					return(NULL);
+				}
+
+				cur++;
+			}
+		}
+	} else if(telex->direction > 0) {
+		for(remaining = telex->data.number; remaining > 0; remaining--) {
+			if(!*cur || *cur == '\n') {
+				return(NULL);
+			}
+
+			cur++;
+		}
+	} else { /* if(telex->direction < 0) } */
+		for(remaining = telex->data.number; remaining > 0; remaining--) {
+			cur--;
+
+			if(!*cur || *cur == '\n') {
+				return(NULL);
+			}
+		}
+	}
+
+	return(cur);
 }
 
 const char* telex_lookup(struct telex *telex, const char *start,
