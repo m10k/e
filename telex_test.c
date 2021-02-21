@@ -2,8 +2,7 @@
 #include "file.h"
 #include "telex.h"
 
-int test(const char *path, const char *cmd,
-         const char *arg0, const char *arg1)
+int test(const char *path, const char *telex_str)
 {
         struct telex *telex;
         struct file *file;
@@ -26,7 +25,7 @@ int test(const char *path, const char *cmd,
                 return(err);
         }
 
-        err = telex_parse(arg0, &telex, &ptr);
+        err = telex_parse(telex_str, &telex, &ptr);
 
         if(err < 0) {
                 printf("Telex parse error near `%s'\n", ptr);
@@ -36,7 +35,7 @@ int test(const char *path, const char *cmd,
         ptr = telex_lookup(telex, data, data_size, data);
 
         if(ptr) {
-                printf("[%s]: %s\n", arg0, ptr);
+                printf("[%s]: %s\n", telex_str, ptr);
         } else {
                 printf("No match\n");
         }
@@ -46,41 +45,16 @@ int test(const char *path, const char *cmd,
 
 int main(int argc, char *argv[])
 {
-        const char *in;
-        const char *cmd;
-        const char *arg0;
-        const char *arg1;
+        const char *file;
+        const char *telex;
 
-        if(argc < 5) {
-                printf("Usage: %s file cmd arg0 arg1\n", argv[0]);
+        if(argc < 3) {
+                printf("Usage: %s file telex\n", argv[0]);
                 return(1);
         }
 
-        in = argv[1];
-        cmd = argv[2];
-        arg0 = argv[3];
-        arg1 = argv[4];
+        file = argv[1];
+        telex = argv[2];
 
-        return(test(in, cmd, arg0, arg1));
+        return(test(file, telex));
 }
-/*
-                struct telex *exprs;
-                int num_exprs;
-
-                exprs = NULL;
-
-                num_exprs = telex_parse(argv[i], &exprs);
-
-                if(num_exprs < 0) {
-                        printf("telex_parse: %s\n", strerror(-num_exprs));
-                        continue;
-                }
-
-                if(num_exprs > 0) {
-                        telex_dbg(exprs, 0);
-                }
-        }
-
-        return(0);
-}
-*/
