@@ -73,6 +73,18 @@ int editor_open(struct editor *editor, const char *path)
 		return(err);
 	}
 
+	err = buffer_clone(editor->prebuffer, &(editor->postbuffer));
+
+	if(err < 0) {
+		return(err);
+	}
+
+	err = textview_set_buffer(editor->postedit, editor->postbuffer);
+
+	if(err < 0) {
+		return(err);
+	}
+
 	widget_redraw((struct widget*)editor->window);
 
 	return(0);
