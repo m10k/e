@@ -138,6 +138,8 @@ int textview_new(struct textview **textview)
 		return(-ENOMEM);
 	}
 
+	((struct widget*)view)->attrs = UI_ATTR_EXPAND;
+
 	((struct widget*)view)->input = _textview_input;
 	((struct widget*)view)->resize = _textview_resize;
 	((struct widget*)view)->redraw = _textview_redraw;
