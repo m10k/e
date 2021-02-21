@@ -69,6 +69,40 @@ static int _buffer_free(struct buffer **buffer)
 	return(0);
 }
 
+int buffer_clone(struct buffer *src, struct buffer **dst)
+{
+	struct buffer *nbuf;
+	int err;
+
+	err = _buffer_new(&nbuf);
+
+	if(err < 0) {
+		return(err);
+	}
+
+	nbuf->data = malloc(src->size);
+
+	if(!nbuf->data) {
+		_buffer_free(&nbuf);
+		return(-ENOMEM);
+	}
+
+	memcpy(nbuf->data, src->data, src->size);
+	nbuf->size = src->size;
+
+	err = file_ref(src->file);
+
+	if(err < 0) {
+		_buffer_free(&nbuf);
+		return(err);
+	}
+
+	nbuf->file = src->file;
+	*dst = nbuf;
+
+	return(0);
+}
+
 int buffer_open(struct buffer **buffer, const char *path)
 {
 	struct buffer *buf;
@@ -93,7 +127,9 @@ int buffer_open(struct buffer **buffer, const char *path)
 		return(err);
 	}
 
+#ifdef DEBUG
 	fprintf(stderr, "Read %lu bytes from %s\n", strlen(data), path);
+#endif /* DEBUG */
 
 	buf->data = data;
 	*buffer = buf;

@@ -13,6 +13,8 @@ int buffer_save(struct buffer *buffer);
 int buffer_append(struct buffer *buffer, char chr);
 const char* buffer_get_data(struct buffer *buffer);
 
+int buffer_clone(struct buffer *src, struct buffer **dst);
+
 int buffer_get_line_at(struct buffer *buffer, const char *pos);
 int buffer_get_snippet(struct buffer *buffer, const int start, const int lines,
 		       struct snippet **snippet);
