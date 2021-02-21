@@ -17,7 +17,90 @@ struct cmdbox {
 	struct string *buffer;
 
 	int cursor;
+	int max_length;
 };
+
+#if 0
+static int _box_insert_at_pos(struct cmdbox *box, int pos, const char chr)
+{
+	if(!box) {
+		return(-EINVAL);
+	} else if(string_get_length(box->buffer) == box->max_length) {
+		return(-EOVERFLOW);
+	} else if(string_insert_char(box->buffer, pos, chr) < 0) {
+		return(-ENOMEM);
+	}
+
+	return(0);
+}
+#endif /* 0 */
+
+static int _box_insert_at_cursor(struct cmdbox *box, const char chr)
+{
+	if(!box) {
+		return(-EINVAL);
+	} else if(string_get_length(box->buffer) == box->max_length) {
+		return(-EOVERFLOW);
+	} else if(string_insert_char(box->buffer, box->cursor, chr) < 0) {
+		return(-ENOMEM);
+	} else {
+		box->cursor++;
+	}
+
+	return(0);
+}
+
+static int _box_remove_cursor_left(struct cmdbox *box)
+{
+	if(!box) {
+		return(-EINVAL);
+	}
+
+	if(box->cursor > 0) {
+		string_remove_char(box->buffer, --box->cursor);
+	}
+
+	return(0);
+}
+
+static int _box_remove_cursor_right(struct cmdbox *box)
+{
+	if(!box) {
+		return(-EINVAL);
+	}
+
+	if(box->cursor < string_get_length(box->buffer)) {
+		string_remove_char(box->buffer, box->cursor);
+	}
+
+	return(0);
+}
+
+static int _box_clear_input(struct cmdbox *box)
+{
+	if(!box) {
+		return(-EINVAL);
+	}
+
+	string_truncate(box->buffer, 0);
+	box->cursor = 0;
+
+	return(0);
+}
+
+static int _box_move_cursor(struct cmdbox *box, int rel)
+{
+	int new_pos;
+
+	new_pos = box->cursor + rel;
+
+	if(new_pos < 0 || new_pos > string_get_length(box->buffer)) {
+		return(-EOVERFLOW);
+	}
+
+	box->cursor = new_pos;
+	return(0);
+}
 
 static int _key_handler_single(struct cmdbox *box, const int key)
 {
@@ -27,7 +110,9 @@ static int _key_handler_single(struct cmdbox *box, const int key)
 	next_handler = _key_handler_single;
 	err = 0;
 
+#ifdef DEBUG_INPUT
 	fprintf(stderr, "S[%d]\n", key);
+#endif /* DEBUG_INPUT */
 
 	switch(key) {
 #if 0
@@ -78,16 +163,12 @@ static int _key_handler_single(struct cmdbox *box, const int key)
 
 	case 127:
 		/* backspace */
-		if(box->cursor > 0) {
-			string_remove_char(box->buffer, --box->cursor);
-		}
-
+		_box_remove_cursor_left(box);
 		break;
 
 	case 10:
 		/* enter */
-		string_truncate(box->buffer, 0);
-		box->cursor = 0;
+		_box_clear_input(box);
 		break;
 
 	case 27:
@@ -95,12 +176,7 @@ static int _key_handler_single(struct cmdbox *box, const int key)
 		break;
 
 	default:
-		if(string_insert_char(box->buffer, box->cursor, (char)key) < 0) {
-			err = -ENOMEM;
-			break;
-		}
-		box->cursor++;
-
+		_box_insert_at_cursor(box, (char)key);
 		break;
 	}
 
@@ -147,7 +223,9 @@ static int _key_handler_double(struct cmdbox *box, const int key)
 	next_handler = _key_handler_single;
 	err = 0;
 
+#ifdef DEBUG_INPUT
 	fprintf(stderr, "D[%d]\n", key);
+#endif /* DEBUG_INPUT */
 
 	switch(key) {
 	case 27:
@@ -220,9 +298,7 @@ static int _key_handler_del(struct cmdbox *box, const int key)
 	err = 0;
 
 	if(key == 126) {
-		if(box->cursor < string_get_length(box->buffer)) {
-			string_remove_char(box->buffer, box->cursor);
-		}
+		_box_remove_cursor_right(box);
 	} else {
 		err = -EINVAL;
 	}
@@ -239,21 +315,19 @@ static int _key_handler_triple(struct cmdbox *box, const int key)
 	next_handler = _key_handler_single;
 	err = 0;
 
+#if DEBUG_INPUT
 	fprintf(stderr, "T[%d]\n", key);
+#endif /* DEBUG_INPUT */
 
 	switch(key) {
 	case 68:
 		/* left */
-		if(box->cursor > 0) {
-			box->cursor--;
-		}
+		_box_move_cursor(box, -1);
 		break;
 
 	case 67:
 		/* right */
-		if(box->cursor < string_get_length(box->buffer)) {
-			box->cursor++;
-		}
+		_box_move_cursor(box, +1);
 		break;
 
 	case 65: /* up */
@@ -316,9 +390,16 @@ static int _cmdbox_input(struct widget *widget, const int ev)
 
 static int _cmdbox_resize(struct widget *widget)
 {
+	struct cmdbox *box;
+
 	if(!widget) {
 		return(-EINVAL);
 	}
+
+	box = (struct cmdbox*)widget;
+
+	widget->height = 1;
+	box->max_length = widget->width;
 
 	return(0);
 }
