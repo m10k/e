@@ -10,6 +10,7 @@
 struct file {
 	int fd;
 	char *path;
+	int refs;
 };
 
 static int _file_alloc(struct file **file)
@@ -28,6 +29,7 @@ static int _file_alloc(struct file **file)
 
 	memset(f, 0, sizeof(*f));
 	f->fd = -1;
+	f->refs = 1;
 
 	*file = f;
 
@@ -40,13 +42,15 @@ static int _file_free(struct file **file)
 		return(-EINVAL);
 	}
 
-	if((*file)->path) {
-		free((*file)->path);
-	}
+	if(--(*file)->refs == 0) {
+		if((*file)->path) {
+			free((*file)->path);
+		}
 
-	memset(*file, 0, sizeof(**file));
-	free(*file);
-	*file = NULL;
+		memset(*file, 0, sizeof(**file));
+		free(*file);
+		*file = NULL;
+	}
 
 	return(0);
 }
@@ -280,4 +284,14 @@ int file_write(struct file *file, const char *data)
 	}
 
 	return(err);
+}
+
+int file_ref(struct file *file)
+{
+	if(!file) {
+		return(-EINVAL);
+	}
+
+	file->refs++;
+	return(0);
 }
