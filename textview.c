@@ -108,6 +108,46 @@ static int _textview_draw_line(struct textview *textview, const int y, struct li
 	return(0);
 }
 
+static int _textview_draw_status(struct textview *textview)
+{
+	struct widget *widget;
+	char from[128];
+	char to[128];
+	char status[384];
+
+	if(!textview) {
+		return(-EINVAL);
+	}
+
+	widget = (struct widget*)textview;
+
+	if(textview->start) {
+		telex_to_string(textview->start, from, sizeof(from));
+	} else {
+		from[0] = 0;
+	}
+
+	if(textview->end) {
+		telex_to_string(textview->end, to, sizeof(to));
+	} else {
+		to[0] = 0;
+	}
+
+	if(!textview->start && !textview->end) {
+		status[0] = 0;
+	} else {
+		snprintf(status, sizeof(status), "Selection [ %s : %s ]",
+			 from, to);
+	}
+
+	widget_clear(widget, 0, widget->height - 1, widget->width, 1);
+
+	mvprintw(widget->y + widget->height - 1, 0, "%s", status);
+	mvchgat(widget->y + widget->height - 1, 0, -1, 0, UI_COLOR_STATUS, NULL);
+
+	return(0);
+}
+
 static int _textview_redraw(struct widget *widget)
 {
 	struct textview *textview;
@@ -122,7 +162,7 @@ static int _textview_redraw(struct widget *widget)
 	}
 
 	textview = (struct textview*)widget;
-	max_lines = widget->height;
+	max_lines = widget->height - 1;
 	y = 0;
 
 	/* FIXME: clear textview */
@@ -146,6 +186,8 @@ static int _textview_redraw(struct widget *widget)
 	}
 
 	snippet_free(&snip);
+
+	_textview_draw_status(textview);
 
 	return(0);
 }
