@@ -139,6 +139,7 @@ static int _initialize_curses(void)
 		init_pair(UI_COLOR_SELECTION, COLOR_WHITE, COLOR_BLUE);
 		init_pair(UI_COLOR_DELETION, COLOR_RED, COLOR_WHITE);
 		init_pair(UI_COLOR_INSERTION, COLOR_GREEN, COLOR_WHITE);
+		init_pair(UI_COLOR_STATUS, COLOR_BLACK, COLOR_GREEN);
 	}
 
 	if(err < 0 && err != -EFAULT) {
