@@ -544,3 +544,53 @@ const char* telex_lookup(struct telex *telex, const char *start,
 
 	return(cur_pos);
 }
+
+int telex_to_string(struct telex *telex, char *str, const size_t str_size)
+{
+	static const char *prefix[] = {
+		"-", "", "+"
+	};
+
+	int len;
+
+	if(!telex || !str) {
+		return(-EINVAL);
+	}
+
+	switch(telex->type) {
+	case TELEX_LINE:
+		len = snprintf(str, str_size, "%s%lu",
+			       prefix[telex->direction + 1],
+			       telex->data.number);
+		break;
+
+	case TELEX_COLUMN:
+		len = snprintf(str, str_size, "%s#%lu",
+			       prefix[telex->direction + 1],
+			       telex->data.number);
+		break;
+
+	case TELEX_REGEX:
+		len = snprintf(str, str_size, "%s\"%s\"",
+			       prefix[telex->direction + 1],
+			       string_get_data(telex->data.regex));
+		break;
+
+	default:
+		return(-EBADMSG);
+	}
+
+	if(telex->next) {
+		int child_len;
+
+		child_len = telex_to_string(telex->next, str + len, str_size - len);
+
+		if(child_len < 0) {
+			return(len);
+		}
+
+		return(len + child_len);
+	}
+
+	return(len);
+}
