@@ -62,6 +62,9 @@ struct textview;
 	} while(0);
 
 
+int widget_clear(struct widget *widget, const int x, const int y,
+		 const int width, const int height);
+
 #define container_add(c,w) ((c)->add((c), (w)))
 
 int window_new(struct window **window);
