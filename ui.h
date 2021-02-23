@@ -94,5 +94,7 @@ int textview_new(struct textview **textview);
 
 int textview_set_buffer(struct textview *textview, struct buffer *buffer);
 int textview_set_selection(struct textview *textview, struct telex *start, struct telex *end);
+int textview_set_selection_start(struct textview *textview, struct telex *start);
+int textview_set_selection_end(struct textview *textview, struct telex *end);
 
 #endif /* E_UI_H */

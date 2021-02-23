@@ -249,11 +249,49 @@ int textview_set_selection(struct textview *textview, struct telex *start, struc
 		return(-EINVAL);
 	}
 
+	selection_changed = FALSE;
+
 	if(textview->start != start || textview->end != end) {
 		selection_changed = TRUE;
 	}
 
 	textview->start = start;
+	textview->end = end;
+
+	if(selection_changed) {
+		widget_redraw((struct widget*)textview);
+	}
+
+	return(0);
+}
+
+int textview_set_selection_start(struct textview *textview, struct telex *start)
+{
+	int selection_changed;
+
+	if(!textview) {
+		return(-EINVAL);
+	}
+
+	selection_changed = textview->start != start;
+	textview->start = start;
+
+	if(selection_changed) {
+		widget_redraw((struct widget*)textview);
+	}
+
+	return(0);
+}
+
+int textview_set_selection_end(struct textview *textview, struct telex *end)
+{
+	int selection_changed;
+
+	if(!textview) {
+		return(-EINVAL);
+	}
+
+	selection_changed = textview->end != end;
 	textview->end = end;
 
 	if(selection_changed) {
