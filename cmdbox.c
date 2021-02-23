@@ -159,7 +159,37 @@ static int _key_handler_single(struct cmdbox *box, const int key)
 	case 30:  /* ^^ */
 
 #endif
+	case 26:  /* ^Z */
+		if(!widget_emit_signal((struct widget*)box,
+				       "source_start_changed",
+				       box->buffer)) {
+			_box_clear_input(box);
+		}
+		break;
 
+	case 24:  /* ^X */
+		if(!widget_emit_signal((struct widget*)box,
+				       "source_end_changed",
+				       box->buffer)) {
+			_box_clear_input(box);
+		}
+		break;
+
+	case 3:   /* ^C */
+		if(!widget_emit_signal((struct widget*)box,
+				       "destination_start_changed",
+				       box->buffer)) {
+			_box_clear_input(box);
+		}
+		break;
+
+	case 22:  /* ^V */
+		if(!widget_emit_signal((struct widget*)box,
+				       "destination_end_changed",
+				       box->buffer)) {
+			_box_clear_input(box);
+		}
+		break;
 
 	case 127:
 		/* backspace */
@@ -169,6 +199,7 @@ static int _key_handler_single(struct cmdbox *box, const int key)
 	case 10:
 		/* enter */
 		_box_clear_input(box);
+
 		break;
 
 	case 27:
@@ -472,6 +503,11 @@ int cmdbox_new(struct cmdbox **cmdbox)
 	((struct widget*)box)->resize = _cmdbox_resize;
 	((struct widget*)box)->redraw = _cmdbox_redraw;
 	((struct widget*)box)->free = _cmdbox_free;
+
+	widget_add_signal((struct widget*)box, "source_start_changed");
+	widget_add_signal((struct widget*)box, "source_end_changed");
+	widget_add_signal((struct widget*)box, "destination_start_changed");
+	widget_add_signal((struct widget*)box, "destination_end_changed");
 
 	*cmdbox = box;
 
