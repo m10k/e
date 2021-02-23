@@ -61,6 +61,11 @@ static int _vbox_resize(struct widget *widget)
 				continue;
 			}
 
+			if(!(child->attrs & UI_ATTR_VISIBLE)) {
+				rem_children--;
+				continue;
+			}
+
 			if(!(child->attrs & UI_ATTR_VEXPAND)) {
 				rem_height -= child->height;
 				rem_children--;
@@ -77,7 +82,7 @@ static int _vbox_resize(struct widget *widget)
 
 			child = vbox->children[slot];
 
-			if(!child) {
+			if(!child || !(child->attrs & UI_ATTR_VISIBLE)) {
 				continue;
 			}
 
@@ -99,7 +104,7 @@ static int _vbox_resize(struct widget *widget)
 
 			child = vbox->children[slot];
 
-			if(!child) {
+			if(!child || !(child->attrs & UI_ATTR_VISIBLE)) {
 				continue;
 			}
 
@@ -109,8 +114,6 @@ static int _vbox_resize(struct widget *widget)
 			y += child->height;
 		}
 	}
-
-	widget_redraw(widget);
 
 	return(0);
 }
@@ -129,9 +132,15 @@ static int _vbox_redraw(struct widget *widget)
 		int slot;
 
 		for(slot = 0; slot < vbox->max_children; slot++) {
-			if(vbox->children[slot]) {
-				widget_redraw(vbox->children[slot]);
+			struct widget *child;
+
+			child = vbox->children[slot];
+
+			if(!child || !widget_is_visible(child)) {
+				continue;
 			}
+
+			widget_redraw(vbox->children[slot]);
 		}
 	}
 
@@ -189,6 +198,7 @@ static int _vbox_add(struct container *container, struct widget *child)
 	child->window = ((struct widget*)vbox)->window;
 
 	widget_resize((struct widget*)vbox);
+	widget_redraw((struct widget*)vbox);
 
 	return(0);
 }
@@ -220,8 +230,6 @@ int vbox_new(struct vbox **dst, int size)
 	}
 
 	memset(vbox->children, 0, sizeof(*vbox->children) * size);
-
-	((struct widget*)vbox)->attrs = UI_ATTR_EXPAND;
 
 	((struct widget*)vbox)->input = _vbox_input;
 	((struct widget*)vbox)->resize = _vbox_resize;
