@@ -165,7 +165,7 @@ static int _textview_redraw(struct widget *widget)
 	max_lines = widget->height - 1;
 	y = 0;
 
-	/* FIXME: clear textview */
+	widget_clear(widget, 0, 0, widget->width, widget->height);
 
 	if(textview->start) {
 		err = buffer_get_snippet_telex(textview->buffer,
@@ -177,15 +177,13 @@ static int _textview_redraw(struct widget *widget)
 		err = buffer_get_snippet(textview->buffer, 1, max_lines, &snip);
 	}
 
-	if(err < 0) {
-		return(err);
-	}
+	if(!err) {
+		for(line = snippet_get_first_line(snip); line; line = line_get_next(line)) {
+			_textview_draw_line(textview, y++, line);
+		}
 
-	for(line = snippet_get_first_line(snip); line; line = line_get_next(line), y++) {
-		_textview_draw_line(textview, y, line);
+		snippet_free(&snip);
 	}
-
-	snippet_free(&snip);
 
 	_textview_draw_status(textview);
 
