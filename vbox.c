@@ -61,7 +61,7 @@ static int _vbox_resize(struct widget *widget)
 				continue;
 			}
 
-			if(!(child->attrs & UI_ATTR_VISIBLE)) {
+			if(!widget_is_visible(child)) {
 				rem_children--;
 				continue;
 			}
@@ -82,7 +82,7 @@ static int _vbox_resize(struct widget *widget)
 
 			child = vbox->children[slot];
 
-			if(!child || !(child->attrs & UI_ATTR_VISIBLE)) {
+			if(!child || !widget_is_visible(child)) {
 				continue;
 			}
 
@@ -104,7 +104,7 @@ static int _vbox_resize(struct widget *widget)
 
 			child = vbox->children[slot];
 
-			if(!child || !(child->attrs & UI_ATTR_VISIBLE)) {
+			if(!child || !widget_is_visible(child)) {
 				continue;
 			}
 
