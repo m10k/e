@@ -209,6 +209,8 @@ int vbox_new(struct vbox **dst, int size)
 
 	memset(vbox, 0, sizeof(*vbox));
 
+	container_init((struct container*)vbox);
+
 	vbox->max_children = size;
 	vbox->children = malloc(sizeof(*vbox->children) * size);
 

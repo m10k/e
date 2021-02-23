@@ -17,7 +17,8 @@ typedef enum {
 typedef enum {
 	UI_ATTR_HEXPAND = (1 << 0),
 	UI_ATTR_VEXPAND = (1 << 1),
-	UI_ATTR_EXPAND  = (UI_ATTR_HEXPAND | UI_ATTR_VEXPAND)
+	UI_ATTR_EXPAND  = (UI_ATTR_HEXPAND | UI_ATTR_VEXPAND),
+	UI_ATTR_VISIBLE = (1 << 2)
 } ui_attr_t;
 
 struct widget {
@@ -61,10 +62,15 @@ struct textview;
 		(widget)->y = (_y);		\
 	} while(0);
 
+int widget_init(struct widget *widget);
+
+int widget_set_visible(struct widget *widget, int is_visible);
+int widget_is_visible(struct widget *widget);
 
 int widget_clear(struct widget *widget, const int x, const int y,
 		 const int width, const int height);
 
+int container_init(struct container *container);
 #define container_add(c,w) ((c)->add((c), (w)))
 
 int window_new(struct window **window);

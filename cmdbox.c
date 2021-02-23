@@ -458,6 +458,8 @@ int cmdbox_new(struct cmdbox **cmdbox)
 
 	memset(box, 0, sizeof(*box));
 
+	widget_init((struct widget*)box);
+
 	if(string_new(&(box->buffer)) < 0) {
 		free(box);
 		return(-ENOMEM);

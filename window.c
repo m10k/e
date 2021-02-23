@@ -169,6 +169,8 @@ int window_new(struct window **window)
 
 	memset(wind, 0, sizeof(*wind));
 
+	container_init((struct container*)wind);
+
 	((struct widget*)wind)->width = stdscr->_maxx;
 	((struct widget*)wind)->height = stdscr->_maxy;
 

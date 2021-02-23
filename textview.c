@@ -218,7 +218,9 @@ int textview_new(struct textview **textview)
 		return(-ENOMEM);
 	}
 
-	((struct widget*)view)->attrs = UI_ATTR_EXPAND;
+	memset(view, 0, sizeof(*view));
+
+	widget_init((struct widget*)view);
 
 	((struct widget*)view)->input = _textview_input;
 	((struct widget*)view)->resize = _textview_resize;
@@ -241,12 +243,23 @@ int textview_set_buffer(struct textview *textview, struct buffer *buffer)
 
 int textview_set_selection(struct textview *textview, struct telex *start, struct telex *end)
 {
+	int selection_changed;
+
 	if(!textview) {
 		return(-EINVAL);
 	}
 
+	if(textview->start != start || textview->end != end) {
+		selection_changed = TRUE;
+	}
+
 	textview->start = start;
 	textview->end = end;
+
+	if(selection_changed) {
+		widget_set_visible((struct widget*)textview, textview->start == NULL);
+		widget_redraw((struct widget*)textview);
+	}
 
 	return(0);
 }
