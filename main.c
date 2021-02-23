@@ -1,21 +1,67 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <getopt.h>
 #include "editor.h"
+
+#define SHORTOPTS "f:hr"
+
+static struct option _cmd_opts[] = {
+	{ "help", no_argument, 0, 'h' },
+	{ "readonly", no_argument, 0, 'r' },
+	{ "file", required_argument, 0, 'f' },
+	{ 0, 0, 0, 0 }
+};
 
 static void _print_usage(const char *argv0)
 {
-	printf("Usage: %s filename\n", argv0);
+	printf("Usage: %s [OPTIONS]\n"
+	       "\n"
+	       "Options:\n"
+	       " -h  --help          Display this help\n"
+	       " -r  --readonly      Open file read-only\n"
+	       " -f  --file <path>   Open file <path>\n", argv0);
 	return;
 }
 
 int main(int argc, char *argv[])
 {
 	struct editor *editor;
+	const char *filename;
+	int readonly;
 	int err;
 
-	if(argc < 2) {
-		_print_usage(argv[0]);
+	filename = NULL;
+	readonly = 0;
+
+	do {
+		err = getopt_long(argc, argv, SHORTOPTS, _cmd_opts, NULL);
+
+		switch(err) {
+		case 'h':
+			_print_usage(argv[0]);
+			return(1);
+
+		case 'f':
+			filename = optarg;
+			break;
+
+		case 'r':
+			readonly = 1;
+			break;
+
+		case '?':
+			fprintf(stderr, "Unrecognized parameter `%s'\n", optarg);
+			return(1);
+
+		default:
+			err = -1;
+			break;
+		}
+	} while(err >= 0);
+
+	if(!filename) {
+		fprintf(stderr, "Need a filename\n");
 		return(1);
 	}
 
@@ -26,7 +72,7 @@ int main(int argc, char *argv[])
 		return(1);
 	}
 
-	err = editor_open(editor, argv[1]);
+	err = editor_open(editor, filename, readonly);
 
 	if(!err) {
 		editor_run(editor);

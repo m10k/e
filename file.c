@@ -11,6 +11,7 @@ struct file {
 	int fd;
 	char *path;
 	int refs;
+	int readonly;
 };
 
 static int _file_alloc(struct file **file)
@@ -78,7 +79,7 @@ static int _file_set_path(struct file *file, const char *path)
 	return(0);
 }
 
-static int _file_open_path(struct file *file, const char *path)
+static int _file_open_path(struct file *file, const char *path, const int readonly)
 {
 	if(!file || !path) {
 		return(-EINVAL);
@@ -92,17 +93,19 @@ static int _file_open_path(struct file *file, const char *path)
 		return(-ENOMEM);
 	}
 
-	file->fd = open(path, O_RDWR | O_CREAT,
+	file->fd = open(path, readonly ? O_RDONLY : (O_RDWR | O_CREAT),
 			config.file_default_mode);
 
 	if(file->fd < 0) {
 		return(-errno);
 	}
 
+	file->readonly = readonly;
+
 	return(0);
 }
 
-int file_open(struct file **file, const char *path)
+int file_open(struct file **file, const char *path, const int readonly)
 {
 	struct file *f;
 	int err;
@@ -111,7 +114,7 @@ int file_open(struct file **file, const char *path)
 		return(-ENOMEM);
 	}
 
-	err = _file_open_path(f, path);
+	err = _file_open_path(f, path, readonly);
 
 	if(err < 0) {
 		_file_free(&f);

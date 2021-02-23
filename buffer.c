@@ -110,7 +110,7 @@ int buffer_clone(struct buffer *src, struct buffer **dst)
 	return(0);
 }
 
-int buffer_open(struct buffer **buffer, const char *path)
+int buffer_open(struct buffer **buffer, const char *path, const int readonly)
 {
 	struct buffer *buf;
 	char *data;
@@ -120,7 +120,7 @@ int buffer_open(struct buffer **buffer, const char *path)
 		return(-ENOMEM);
 	}
 
-	err = file_open(&(buf->file), path);
+	err = file_open(&(buf->file), path, readonly);
 
 	if(err < 0) {
 		_buffer_free(&buf);

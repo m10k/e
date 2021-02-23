@@ -7,7 +7,7 @@ struct buffer;
 struct snippet;
 struct line;
 
-int buffer_open(struct buffer **buffer, const char *path);
+int buffer_open(struct buffer **buffer, const char *path, const int readonly);
 int buffer_close(struct buffer **buffer);
 int buffer_save(struct buffer *buffer);
 int buffer_append(struct buffer *buffer, char chr);

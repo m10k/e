@@ -14,6 +14,8 @@ struct editor {
 
 	struct buffer *prebuffer;
 	struct buffer *postbuffer;
+
+	int readonly;
 };
 
 static int _cmdbox_selection_start_change(struct widget *widget, void *user_data, void *data)
@@ -132,7 +134,7 @@ static int _editor_init_ui(struct editor *editor)
 	return(0);
 }
 
-int editor_open(struct editor *editor, const char *path)
+int editor_open(struct editor *editor, const char *path, const int readonly)
 {
 	int err;
 
@@ -144,11 +146,13 @@ int editor_open(struct editor *editor, const char *path)
 		return(-EALREADY);
 	}
 
-	err = buffer_open(&(editor->prebuffer), path);
+	err = buffer_open(&(editor->prebuffer), path, readonly);
 
 	if(err < 0) {
 		return(err);
 	}
+
+	editor->readonly = readonly;
 
 	err = textview_set_buffer(editor->preedit, editor->prebuffer);
 
