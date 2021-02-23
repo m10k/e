@@ -72,6 +72,10 @@ int widget_clear(struct widget *widget, const int x, const int y,
 				 widget->x + x + cur_x,
 				 ' ');
                 }
+
+		mvchgat(widget->y + y + cur_y,
+			widget->x + x,
+			width, 0, UI_COLOR_NORMAL, NULL);
         }
 
         return(0);
