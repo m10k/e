@@ -16,6 +16,56 @@ struct editor {
 	struct buffer *postbuffer;
 };
 
+static int _cmdbox_selection_start_change(struct widget *widget, void *user_data, void *data)
+{
+	struct textview *textview;
+	struct string *expr;
+	const char *err_ptr;
+	struct telex *telex;
+	int err;
+
+	if(!widget || !user_data || !data) {
+		return(-EINVAL);
+	}
+
+	textview = (struct textview*)user_data;
+	expr = (struct string*)data;
+
+	err = telex_parse(string_get_data(expr),
+			  &telex, &err_ptr);
+
+	if(!err) {
+		textview_set_selection_start(textview, telex);
+	}
+
+	return(0);
+}
+
+static int _cmdbox_selection_end_change(struct widget *widget, void *user_data, void *data)
+{
+	struct textview *textview;
+	struct string *expr;
+	const char *err_ptr;
+	struct telex *telex;
+	int err;
+
+	if(!widget || !user_data || !data) {
+		return(-EINVAL);
+	}
+
+	textview = (struct textview*)user_data;
+	expr = (struct string*)data;
+
+	err = telex_parse(string_get_data(expr),
+			  &telex, &err_ptr);
+
+	if(!err) {
+		textview_set_selection_end(textview, telex);
+	}
+
+	return(0);
+}
+
 static int _editor_init_ui(struct editor *editor)
 {
 	int err;
@@ -44,7 +94,32 @@ static int _editor_init_ui(struct editor *editor)
 	} else if((err = container_add((struct container*)editor->vbox,
 				       (struct widget*)editor->cmdbox)) < 0) {
 		return(err);
+	} else if((err = widget_add_handler((struct widget*)editor->cmdbox,
+					    "source_start_changed",
+					    _cmdbox_selection_start_change,
+					    editor->preedit)) < 0) {
+		return(err);
+	} else if((err = widget_add_handler((struct widget*)editor->cmdbox,
+					    "source_end_changed",
+					    _cmdbox_selection_end_change,
+					    editor->preedit)) < 0) {
+		return(err);
+	} else if((err = widget_add_handler((struct widget*)editor->cmdbox,
+					    "destination_start_changed",
+					    _cmdbox_selection_start_change,
+					    editor->postedit)) < 0) {
+		return(err);
+	} else if((err = widget_add_handler((struct widget*)editor->cmdbox,
+					    "destination_end_changed",
+					    _cmdbox_selection_end_change,
+					    editor->postedit)) < 0) {
+		return(err);
 	}
+
+	widget_set_visible((struct widget*)editor->postedit, FALSE);
+
+	widget_resize((struct widget*)editor->window);
+	widget_redraw((struct widget*)editor->window);
 
 	return(0);
 }
