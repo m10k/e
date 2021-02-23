@@ -519,7 +519,7 @@ const char* telex_lookup(struct telex *telex, const char *start,
 {
 	const char *cur_pos;
 
-	for(cur_pos = pos; telex; telex = telex->next) {
+	for(cur_pos = pos; telex && cur_pos; telex = telex->next) {
 		const char *new_pos;
 
 		switch(telex->type) {
