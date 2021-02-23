@@ -460,6 +460,9 @@ int cmdbox_new(struct cmdbox **cmdbox)
 
 	widget_init((struct widget*)box);
 
+	/* don't vertically expand cmdboxes */
+	((struct widget*)box)->attrs &= ~UI_ATTR_VEXPAND;
+
 	if(string_new(&(box->buffer)) < 0) {
 		free(box);
 		return(-ENOMEM);
