@@ -21,6 +21,8 @@ typedef enum {
 	UI_ATTR_VISIBLE = (1 << 2)
 } ui_attr_t;
 
+struct signal;
+
 struct widget {
 	int x;
 	int y;
@@ -31,6 +33,7 @@ struct widget {
 
 	WINDOW *window;
 	struct widget *parent;
+	struct signal *signals;
 
 	int (*input)(struct widget*, const int);
 	int (*resize)(struct widget*);
@@ -48,6 +51,8 @@ struct window;
 struct cmdbox;
 struct vbox;
 struct textview;
+
+typedef int (widget_handler_t)(struct widget*, void*, void*);
 
 #define widget_input(w,c) ((w)->input((w), (c)))
 #define widget_resize(w)  ((w)->resize((w)))
@@ -69,6 +74,15 @@ int widget_is_visible(struct widget *widget);
 
 int widget_clear(struct widget *widget, const int x, const int y,
 		 const int width, const int height);
+
+int widget_add_signal(struct widget *widget, const char *name);
+int widget_remove_signal(struct widget *widget, const char *name);
+
+int widget_add_handler(struct widget *widget, const char *name,
+		       widget_handler_t *handler, void *user_data);
+int widget_remove_handler(struct widget *widget, const char *name, widget_handler_t *handler);
+
+int widget_emit_signal(struct widget *widget, const char *name, void *data);
 
 int container_init(struct container *container);
 #define container_add(c,w) ((c)->add((c), (w)))
