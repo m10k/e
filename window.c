@@ -172,8 +172,8 @@ int window_new(struct window **window)
 
 	container_init((struct container*)wind);
 
-	((struct widget*)wind)->width = stdscr->_maxx;
-	((struct widget*)wind)->height = stdscr->_maxy;
+	((struct widget*)wind)->width = stdscr->_maxx + 1;
+	((struct widget*)wind)->height = stdscr->_maxy + 1;
 
 	((struct widget*)wind)->input = _window_input;
 	((struct widget*)wind)->resize = _window_resize;
