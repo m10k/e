@@ -43,9 +43,9 @@ int _window_resize(struct widget *widget)
 		window->child->y = 0;
 		window->child->width = widget->width;
 		window->child->height = widget->height;
-	}
 
-	widget_redraw(widget);
+		widget_resize(window->child);
+	}
 
 	return(0);
 }
@@ -106,9 +106,10 @@ int _window_add(struct container *container, struct widget *child)
 
 	child->parent = (struct widget*)window;
 	child->window = window->window;
-
 	window->child = child;
+
 	widget_resize((struct widget*)window);
+	widget_redraw((struct widget*)window);
 
 	return(0);
 }
