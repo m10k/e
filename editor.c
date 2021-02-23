@@ -36,7 +36,11 @@ static int _cmdbox_selection_start_change(struct widget *widget, void *user_data
 
 	if(!err) {
 		textview_set_selection_start(textview, telex);
+		widget_set_visible((struct widget*)textview, TRUE);
 	}
+
+	widget_resize(widget->parent);
+	widget_redraw(widget->parent);
 
 	return(0);
 }
@@ -61,7 +65,11 @@ static int _cmdbox_selection_end_change(struct widget *widget, void *user_data, 
 
 	if(!err) {
 		textview_set_selection_end(textview, telex);
+		widget_set_visible((struct widget*)textview, TRUE);
 	}
+
+	widget_resize(widget->parent);
+	widget_redraw(widget->parent);
 
 	return(0);
 }
