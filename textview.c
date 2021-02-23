@@ -257,7 +257,6 @@ int textview_set_selection(struct textview *textview, struct telex *start, struc
 	textview->end = end;
 
 	if(selection_changed) {
-		widget_set_visible((struct widget*)textview, textview->start == NULL);
 		widget_redraw((struct widget*)textview);
 	}
 
