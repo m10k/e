@@ -18,6 +18,10 @@ struct cmdbox {
 
 	int cursor;
 	int max_length;
+
+	int highlight_start;
+	int highlight_len;
+	ui_color_t highlight_color;
 };
 
 #if 0
@@ -447,10 +451,21 @@ static int _cmdbox_redraw(struct widget *widget)
 	box = (struct cmdbox*)widget;
 
 	for(x = 0; x <= widget->width; x++) {
-		mvwaddch(widget->window, widget->y, widget->x + x, ' ');
+		mvwaddch(widget->window, widget->y,
+			 widget->x + x, ' ');
 	}
 
-	mvwprintw(widget->window, widget->y, widget->x, "%s", string_get_data(box->buffer));
+	mvwprintw(widget->window, widget->y, widget->x,
+		  "%s", string_get_data(box->buffer));
+
+	if(box->highlight_len > 0) {
+		widget_set_color(widget, UI_COLOR_COMMAND,
+				 0, 0, -1, -1);
+		widget_set_color(widget, box->highlight_color,
+				 box->highlight_start, 0,
+				 box->highlight_len, 1);
+	}
+
 	move(box->_parent.y, box->cursor);
 
 	return(0);
@@ -512,4 +527,31 @@ int cmdbox_new(struct cmdbox **cmdbox)
 	*cmdbox = box;
 
 	return(0);
+}
+
+int cmdbox_highlight(struct cmdbox *box, const ui_color_t color,
+		     const int pos, const int len)
+{
+	int width;
+
+	if(!box) {
+		return(-EINVAL);
+	}
+
+	width = ((struct widget*)box)->width;
+
+	if(pos < 0 || pos > width) {
+		return(-EOVERFLOW);
+	}
+
+	box->highlight_color = color;
+	box->highlight_start = pos;
+	box->highlight_len = (pos + len > width) ? width - pos : len;
+
+	fprintf(stderr, "%s(%p, %d, %d, %d) -> (%d, %d, %d)\n",
+		__func__, (void*)box, color, pos, len,
+		box->highlight_color, box->highlight_start,
+		box->highlight_len);
+
+	return(widget_redraw((struct widget*)box));
 }
