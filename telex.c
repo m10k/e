@@ -594,3 +594,17 @@ int telex_to_string(struct telex *telex, char *str, const size_t str_size)
 
 	return(len);
 }
+
+int telex_append(struct telex *head, struct telex *tail)
+{
+	struct telex *cur;
+
+	if(!head || !tail) {
+		return(-EINVAL);
+	}
+
+	for(cur = head; cur->next; cur = cur->next);
+	cur->next = tail;
+
+	return(0);
+}
