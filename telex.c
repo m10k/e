@@ -415,18 +415,20 @@ static const char* _telex_lookup_line(struct telex *telex, const char *start,
 {
 	const char *cur;
 	long remaining;
+	int direction;
 
 	remaining = telex->data.number;
+	direction = telex->direction;
 	cur = pos;
 
-	if(telex->direction == 0 &&
-	   telex->data.number == 0) {
+	if(direction == 0 && remaining == 0) {
+		/* go to last line */
 		cur = start + size;
-		telex->direction = -1;
-		telex->data.number = 1;
+		direction = -1;
+		remaining = 1;
 	}
 
-	if(telex->direction == 0) {
+	if(direction == 0) {
 		cur = start;
 
 		while(--remaining > 0) {
@@ -438,7 +440,7 @@ static const char* _telex_lookup_line(struct telex *telex, const char *start,
 
 			cur++;
 		}
-	} else if(telex->direction > 0) {
+	} else if(direction > 0) {
 		while(remaining-- > 0) {
 			cur = strchr(cur, '\n');
 
