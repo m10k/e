@@ -547,3 +547,15 @@ int cmdbox_highlight(struct cmdbox *box, const ui_color_t color,
 
 	return(widget_redraw((struct widget*)box));
 }
+
+int cmdbox_clear(struct cmdbox *box)
+{
+	if(!box) {
+		return(-EINVAL);
+	}
+
+	_box_clear_input(box);
+	cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+
+	return(0);
+}
