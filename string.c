@@ -78,7 +78,8 @@ static int _string_grow(struct string *str, const size_t n)
 	return(0);
 }
 
-int string_insert_char(struct string *str, const int pos, const char chr)
+int string_insert_char(struct string *str, const int pos,
+		       const char chr)
 {
 	size_t suffix_len;
 	int real_pos;
@@ -167,4 +168,34 @@ int string_get_length(struct string *str)
 	}
 
 	return((int)str->len);
+}
+
+int string_clone(struct string *src, struct string **dst)
+{
+	struct string *copy;
+
+	if(!src || !dst) {
+		return(-EINVAL);
+	}
+
+	copy = malloc(sizeof(*copy));
+
+	if(!copy) {
+		return(-ENOMEM);
+	}
+
+	copy->data = malloc(src->size);
+
+	if(!copy->data) {
+		free(copy);
+		return(-ENOMEM);
+	}
+
+	memcpy(copy->data, src->data, src->size);
+	copy->size = src->size;
+	copy->len = src->len;
+
+	*dst = copy;
+
+	return(0);
 }
