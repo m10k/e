@@ -81,6 +81,45 @@ int widget_clear(struct widget *widget, const int x, const int y,
         return(0);
 }
 
+int widget_set_color(struct widget *widget, const ui_color_t color,
+		     const int x, const int y,
+		     const int width, const int height)
+{
+	int row;
+	int w;
+	int h;
+
+	if(!widget) {
+		return(-EINVAL);
+	}
+
+	w = (width < 0 || width > widget->width) ?
+		widget->width : width;
+	h = (height < 0 || height > widget->height) ?
+		widget->height : height;
+
+	if(x < 0 || x > widget->width ||
+	   y < 0 || y > widget->height) {
+		return(-EOVERFLOW);
+	}
+
+	if((x + w) > widget->width ||
+	   (y + h) > widget->height) {
+		w = -1; /* until the end of the line */
+		h = widget->height - y;
+	}
+
+	for(row = 0; row < h; row++) {
+		fprintf(stderr, "mvchgat(%d, %d, %d, 0, %d, NULL)\n",
+			widget->y + y + row, widget->x + x, w,
+			color);
+		mvchgat(widget->y + y + row, widget->x + x,
+			w, 0, color, NULL);
+	}
+
+	return(0);
+}
+
 int widget_is_visible(struct widget *widget)
 {
 	if(!widget) {

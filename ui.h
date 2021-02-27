@@ -74,6 +74,9 @@ int widget_is_visible(struct widget *widget);
 
 int widget_clear(struct widget *widget, const int x, const int y,
 		 const int width, const int height);
+int widget_set_color(struct widget *widget, const ui_color_t color,
+		     const int x, const int y,
+		     const int width, const int height);
 
 int widget_add_signal(struct widget *widget, const char *name);
 int widget_remove_signal(struct widget *widget, const char *name);
