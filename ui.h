@@ -11,7 +11,8 @@ typedef enum {
 	UI_COLOR_SELECTION,
 	UI_COLOR_DELETION,
 	UI_COLOR_INSERTION,
-	UI_COLOR_STATUS
+	UI_COLOR_STATUS,
+	UI_COLOR_COMMAND
 } ui_color_t;
 
 typedef enum {

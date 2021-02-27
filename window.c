@@ -135,12 +135,20 @@ static int _initialize_curses(void)
 		err = 0;
 		_initialized = 1;
 
-		init_pair(UI_COLOR_NORMAL, COLOR_BLACK, COLOR_WHITE);
-		init_pair(UI_COLOR_LINES, COLOR_WHITE, COLOR_BLUE);
-		init_pair(UI_COLOR_SELECTION, COLOR_WHITE, COLOR_BLUE);
-		init_pair(UI_COLOR_DELETION, COLOR_RED, COLOR_WHITE);
-		init_pair(UI_COLOR_INSERTION, COLOR_GREEN, COLOR_WHITE);
-		init_pair(UI_COLOR_STATUS, COLOR_BLACK, COLOR_GREEN);
+		init_pair(UI_COLOR_NORMAL,
+			  COLOR_BLACK, COLOR_WHITE);
+		init_pair(UI_COLOR_LINES,
+			  COLOR_WHITE, COLOR_BLUE);
+		init_pair(UI_COLOR_SELECTION,
+			  COLOR_WHITE, COLOR_BLUE);
+		init_pair(UI_COLOR_DELETION,
+			  COLOR_WHITE, COLOR_RED);
+		init_pair(UI_COLOR_INSERTION,
+			  COLOR_GREEN, COLOR_WHITE);
+		init_pair(UI_COLOR_STATUS,
+			  COLOR_BLACK, COLOR_GREEN);
+		init_pair(UI_COLOR_COMMAND,
+			  COLOR_WHITE, COLOR_BLACK);
 	}
 
 	if(err < 0 && err != -EFAULT) {
