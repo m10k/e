@@ -608,3 +608,49 @@ int telex_append(struct telex *head, struct telex *tail)
 
 	return(0);
 }
+
+int telex_clone(struct telex *src, struct telex **dst)
+{
+	struct telex *copy;
+	int err;
+
+	if(!src || !dst) {
+		return(-EINVAL);
+	}
+
+	if(_telex_new(&copy) < 0) {
+		return(-ENOMEM);
+	}
+
+	memcpy(copy, src, sizeof(*copy));
+	copy->next = NULL;
+
+	if(copy->type == TELEX_REGEX) {
+		if(string_clone(copy->data.regex,
+				&(copy->data.regex)) < 0) {
+			/*
+			 * Make sure copy->data.regex does not
+			 * reference the source telex's string
+			 * because it might be free'd by
+			 * telex_free().
+			 */
+			copy->data.regex = NULL;
+			telex_free(&copy);
+
+			return(-ENOMEM);
+		}
+	}
+
+	if(src->next) {
+		err = telex_clone(src->next, &(copy->next));
+
+		if(err < 0) {
+			telex_free(&copy);
+		}
+	} else {
+		*dst = copy;
+		err = 0;
+	}
+
+	return(err);
+}
