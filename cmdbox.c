@@ -164,35 +164,27 @@ static int _key_handler_single(struct cmdbox *box, const int key)
 
 #endif
 	case 26:  /* ^Z */
-		if(!widget_emit_signal((struct widget*)box,
-				       "source_start_changed",
-				       box->buffer)) {
-			_box_clear_input(box);
-		}
+		widget_emit_signal((struct widget*)box,
+				   "source_start_changed",
+				   box->buffer);
 		break;
 
 	case 24:  /* ^X */
-		if(!widget_emit_signal((struct widget*)box,
-				       "source_end_changed",
-				       box->buffer)) {
-			_box_clear_input(box);
-		}
+		widget_emit_signal((struct widget*)box,
+				   "source_end_changed",
+				   box->buffer);
 		break;
 
 	case 3:   /* ^C */
-		if(!widget_emit_signal((struct widget*)box,
-				       "destination_start_changed",
-				       box->buffer)) {
-			_box_clear_input(box);
-		}
+		widget_emit_signal((struct widget*)box,
+				   "destination_start_changed",
+				   box->buffer);
 		break;
 
 	case 22:  /* ^V */
-		if(!widget_emit_signal((struct widget*)box,
-				       "destination_end_changed",
-				       box->buffer)) {
-			_box_clear_input(box);
-		}
+		widget_emit_signal((struct widget*)box,
+				   "destination_end_changed",
+				   box->buffer);
 		break;
 
 	case 127:
