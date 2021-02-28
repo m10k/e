@@ -92,6 +92,7 @@ int container_init(struct container *container);
 #define container_add(c,w) ((c)->add((c), (w)))
 
 int window_new(struct window **window);
+int window_adjust_size(struct window *window);
 int cmdbox_new(struct cmdbox **cmdbox);
 int cmdbox_highlight(struct cmdbox *box, const ui_color_t color,
 		     const int pos, const int len);

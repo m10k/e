@@ -1,6 +1,8 @@
 #include <ncurses.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 #include <errno.h>
 #include "ui.h"
 
@@ -10,6 +12,20 @@ struct window {
 	WINDOW *window;
 	struct widget *child;
 };
+
+static int _get_terminal_size(int *width, int *height)
+{
+	struct winsize wsize;
+
+	if(ioctl(STDIN_FILENO, TIOCGWINSZ, &wsize) < 0) {
+		return(-errno);
+	}
+
+	*width = wsize.ws_col;
+	*height = wsize.ws_row;
+
+	return(0);
+}
 
 int _window_input(struct widget *widget, const int ev)
 {
@@ -28,6 +44,34 @@ int _window_input(struct widget *widget, const int ev)
 	return(0);
 }
 
+int window_adjust_size(struct window *window)
+{
+	int width;
+	int height;
+
+	if(!window) {
+		return(-EINVAL);
+	}
+
+	if(_get_terminal_size(&width, &height) < 0) {
+		return(-EIO);
+	}
+
+	if(width == ((struct widget*)window)->width &&
+	   height == ((struct widget*)window)->height) {
+		return(0);
+	}
+
+	if(resizeterm(height, width) != OK) {
+		return(-EIO);
+	}
+
+	widget_resize((struct widget*)window);
+	widget_redraw((struct widget*)window);
+
+	return(0);
+}
+
 int _window_resize(struct widget *widget)
 {
 	struct window *window;
@@ -38,6 +82,9 @@ int _window_resize(struct widget *widget)
 
 	window = (struct window*)widget;
 
+	widget->width = stdscr->_maxx + 1;
+	widget->height = stdscr->_maxy + 1;
+
 	if(window->child) {
 		window->child->x = 0;
 		window->child->y = 0;
@@ -46,6 +93,8 @@ int _window_resize(struct widget *widget)
 
 		widget_resize(window->child);
 	}
+
+	widget_redraw(widget);
 
 	return(0);
 }

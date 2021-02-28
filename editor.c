@@ -539,9 +539,11 @@ int editor_run(struct editor *editor)
 
 		if(event == 17) {
 			break;
+		} else if(event == KEY_RESIZE) {
+			window_adjust_size(editor->window);
+		} else {
+			widget_input((struct widget*)editor->window, event);
 		}
-
-		widget_input((struct widget*)editor->window, event);
 	}
 
 	return(0);
