@@ -96,6 +96,9 @@ int cmdbox_new(struct cmdbox **cmdbox);
 int cmdbox_highlight(struct cmdbox *box, const ui_color_t color,
 		     const int pos, const int len);
 int cmdbox_clear(struct cmdbox *box);
+int cmdbox_set_text(struct cmdbox *box, const char *text);
+const char* cmdbox_get_text(struct cmdbox *box);
+int cmdbox_get_length(struct cmdbox *box);
 
 int vbox_new(struct vbox **vbox, int size);
 int textview_new(struct textview **textview);
