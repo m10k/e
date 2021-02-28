@@ -194,6 +194,11 @@ const char* buffer_get_data(struct buffer *buffer)
 	return(buffer->data);
 }
 
+size_t buffer_get_size(struct buffer *buffer)
+{
+	return(buffer->size);
+}
+
 static int _get_snippet_extent(struct buffer *buffer, const int start, const int lines,
 			       const char **snip_start, const char **snip_end)
 {

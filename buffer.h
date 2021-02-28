@@ -12,6 +12,7 @@ int buffer_close(struct buffer **buffer);
 int buffer_save(struct buffer *buffer);
 int buffer_append(struct buffer *buffer, char chr);
 const char* buffer_get_data(struct buffer *buffer);
+size_t buffer_get_size(struct buffer *buffer);
 
 int buffer_clone(struct buffer *src, struct buffer **dst);
 
