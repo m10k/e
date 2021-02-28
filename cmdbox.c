@@ -540,11 +540,6 @@ int cmdbox_highlight(struct cmdbox *box, const ui_color_t color,
 	box->highlight_start = pos;
 	box->highlight_len = (pos + len > width) ? width - pos : len;
 
-	fprintf(stderr, "%s(%p, %d, %d, %d) -> (%d, %d, %d)\n",
-		__func__, (void*)box, color, pos, len,
-		box->highlight_color, box->highlight_start,
-		box->highlight_len);
-
 	return(widget_redraw((struct widget*)box));
 }
 
@@ -558,4 +553,41 @@ int cmdbox_clear(struct cmdbox *box)
 	cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
 
 	return(0);
+}
+
+int cmdbox_set_text(struct cmdbox *box, const char *text)
+{
+	const char *pos;
+
+	if(!box || !text) {
+		return(-EINVAL);
+	}
+
+	cmdbox_clear(box);
+
+	for(pos = text; *pos; pos++) {
+		_box_insert_at_cursor(box, *pos);
+	}
+
+	widget_redraw((struct widget*)box);
+
+	return(0);
+}
+
+const char* cmdbox_get_text(struct cmdbox *box)
+{
+	if(!box) {
+		return(NULL);
+	}
+
+	return(string_get_data(box->buffer));
+}
+
+int cmdbox_get_length(struct cmdbox *box)
+{
+	if(!box) {
+		return(-EINVAL);
+	}
+
+	return(string_get_length(box->buffer));
 }
