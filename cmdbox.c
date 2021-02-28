@@ -92,7 +92,7 @@ static int _box_clear_input(struct cmdbox *box)
 	return(0);
 }
 
-static int _box_move_cursor(struct cmdbox *box, int rel)
+static int _box_move_cursor(struct cmdbox *box, const int rel)
 {
 	int new_pos;
 
@@ -100,6 +100,27 @@ static int _box_move_cursor(struct cmdbox *box, int rel)
 
 	if(new_pos < 0 || new_pos > string_get_length(box->buffer)) {
 		return(-EOVERFLOW);
+	}
+
+	box->cursor = new_pos;
+	return(0);
+}
+
+static int _box_set_cursor(struct cmdbox *box, const int pos)
+{
+	int new_pos;
+	int limit;
+
+	if(!box) {
+		return(-EINVAL);
+	}
+
+	limit = string_get_length(box->buffer);
+
+	if(pos < 0 || pos > limit) {
+		new_pos = limit;
+	} else {
+		new_pos = pos;
 	}
 
 	box->cursor = new_pos;
@@ -154,7 +175,7 @@ static int _key_handler_single(struct cmdbox *box, const int key)
 	case 22:  /* ^V */
 	case 2:   /* ^B */
 	case 14:  /* ^N */
-	case 10:  /* ^J */
+	case 13:  /* ^M (usually mapped to 10: ^J) */
 	case 44:  /* , */
 	case 46:  /* . */
 	case 31:  /* ^_ */
@@ -163,6 +184,26 @@ static int _key_handler_single(struct cmdbox *box, const int key)
 	case 30:  /* ^^ */
 
 #endif
+	case 2:   /* ^B */
+		_box_move_cursor(box, -1);
+		break;
+
+	case 6:   /* ^F */
+		_box_move_cursor(box, +1);
+		break;
+
+	case 5:   /* ^E */
+		_box_set_cursor(box, -1);
+		break;
+
+	case 1:   /* ^A */
+		_box_set_cursor(box, 0);
+		break;
+
+	case 4:   /* ^D */
+		_box_remove_cursor_right(box);
+		break;
+
 	case 26:  /* ^Z */
 		widget_emit_signal((struct widget*)box,
 				   "source_start_changed",
@@ -187,8 +228,8 @@ static int _key_handler_single(struct cmdbox *box, const int key)
 				   box->buffer);
 		break;
 
-	case 127:
-		/* backspace */
+	case 8:   /* ^H */
+	case 127: /* backspace */
 		_box_remove_cursor_left(box);
 		break;
 
