@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include "telex.h"
 #include "string.h"
 #include "file.h"
@@ -55,6 +56,8 @@
  *                   line after the next occurence of the token "struct"
  *
  */
+
+#define MULTI_LOOKUP_MAX 16
 
 static int _telex_new(struct telex **dst)
 {
@@ -655,4 +658,37 @@ int telex_clone(struct telex *src, struct telex **dst)
 	}
 
 	return(err);
+}
+
+const char* telex_lookup_multi(const char *start, const size_t size,
+			       const char *pos, const int n, ...)
+{
+	va_list expr_list;
+	const char *cur_pos;
+	struct telex *exprs[MULTI_LOOKUP_MAX];
+	int cur_expr;
+
+	if(!start) {
+		return(NULL); /* -EINVAL */
+	}
+
+	if(n < 1 || n > MULTI_LOOKUP_MAX) {
+		return(NULL); /* -ERANGE */
+	}
+
+	cur_pos = pos ? pos : start;
+
+	va_start(expr_list, n);
+
+	for(cur_expr = 0; cur_expr < n; cur_expr++) {
+		exprs[cur_expr] = (struct telex*)va_arg(expr_list, void*);
+	}
+
+	va_end(expr_list);
+
+	for(cur_expr = 0; cur_expr < n && cur_pos; cur_expr++) {
+		cur_pos = telex_lookup(exprs[cur_expr], start, size, cur_pos);
+	}
+
+	return(cur_pos);
 }
