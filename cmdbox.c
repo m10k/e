@@ -565,6 +565,8 @@ int cmdbox_new(struct cmdbox **cmdbox)
 int cmdbox_highlight(struct cmdbox *box, const ui_color_t color,
 		     const int pos, const int len)
 {
+	ui_color_t eff_color;
+	int eff_len;
 	int width;
 
 	if(!box) {
@@ -577,9 +579,21 @@ int cmdbox_highlight(struct cmdbox *box, const ui_color_t color,
 		return(-EOVERFLOW);
 	}
 
-	box->highlight_color = color;
+	if(len < 0 || pos + len > width) {
+		eff_len = width - pos;
+	} else {
+		eff_len = len;
+	}
+
+	if(color < UI_COLOR_DEFAULT || color > UI_COLOR_COMMAND) {
+		eff_color = UI_COLOR_COMMAND;
+	} else {
+		eff_color = color;
+	}
+
+	box->highlight_color = eff_color;
 	box->highlight_start = pos;
-	box->highlight_len = (pos + len > width) ? width - pos : len;
+	box->highlight_len = eff_len;
 
 	return(widget_redraw((struct widget*)box));
 }
@@ -591,7 +605,7 @@ int cmdbox_clear(struct cmdbox *box)
 	}
 
 	_box_clear_input(box);
-	cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+	cmdbox_highlight(box, UI_COLOR_DELETION, 0, 0);
 
 	return(0);
 }
