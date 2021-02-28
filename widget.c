@@ -141,6 +141,11 @@ int widget_set_visible(struct widget *widget, const int is_visible)
 		widget->attrs &= ~UI_ATTR_VISIBLE;
 	}
 
+	if(widget->parent) {
+		widget_resize(widget->parent);
+		widget_redraw(widget->parent);
+	}
+
 	return(0);
 }
 
