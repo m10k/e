@@ -5,6 +5,7 @@
 #include "ui.h"
 #include "buffer.h"
 #include "telex.h"
+#include "config.h"
 
 struct textview {
 	struct widget _parent;
@@ -12,6 +13,15 @@ struct textview {
 	struct buffer *buffer;
 	struct telex *start;
 	struct telex *end;
+
+	int tab_width;
+
+	int first_line;
+	int pos_x;
+	int pos_y;
+	int num_width;
+	int text_width;
+	int cur_line;
 };
 
 static int _number_width(int number)
@@ -23,6 +33,122 @@ static int _number_width(int number)
 	}
 
 	return(width);
+}
+
+static int _textview_reset(struct textview *textview, const int first_line)
+{
+	int last_line;
+
+	if(!textview) {
+		return(-EINVAL);
+	}
+
+	textview->first_line = first_line;
+	textview->cur_line = first_line;
+	last_line = first_line + ((struct widget*)textview)->height - 1;
+
+	textview->num_width = _number_width(last_line) + 1;
+	textview->text_width = ((struct widget*)textview)->width - textview->num_width;
+	textview->pos_x = textview->num_width;
+	textview->pos_y = 0;
+
+	return(0);
+}
+
+static int _textview_put_linenum(struct textview *textview)
+{
+	struct widget *widget;
+
+	if(!textview) {
+		return(-EINVAL);
+	}
+
+	widget = (struct widget*)textview;
+
+	mvprintw(widget->y + textview->pos_y, widget->x, "%*d ",
+		 textview->num_width - 1, textview->cur_line);
+	mvchgat(widget->y + textview->pos_y, widget->x,
+		textview->num_width, 0, UI_COLOR_LINES, NULL);
+
+	return(0);
+}
+
+static int _textview_putc(struct textview *textview, const char chr)
+{
+	struct widget *widget;
+
+	if(!textview) {
+		return(-EINVAL);
+	}
+
+	widget = (struct widget*)textview;
+
+	if(textview->pos_x > widget->width) {
+		textview->pos_x = textview->num_width;
+		textview->pos_y++;
+	}
+
+	if(textview->pos_x == textview->num_width) {
+	        _textview_put_linenum(textview);
+	}
+
+	if(chr == '\n') {
+		textview->pos_x = textview->num_width;
+		textview->pos_y++;
+		textview->cur_line++;
+	} else {
+		mvprintw(widget->y + textview->pos_y,
+			 widget->x + textview->pos_x,
+			 "%c", chr);
+		mvchgat(widget->y + textview->pos_y,
+			widget->x + textview->pos_x,
+			1, 0, UI_COLOR_NORMAL, NULL);
+
+		textview->pos_x++;
+	}
+
+	return(0);
+}
+
+static int _textview_puts(struct textview *textview, const char *str)
+{
+	int len;
+
+	if(!textview) {
+		return(-EINVAL);
+	}
+
+	for(len = 0; *str; len++, str++) {
+		int err;
+
+		err = 0;
+
+	        if(*str == '\t') {
+			int cur_pos;
+			int cols_since_tabstop;
+			int cols_to_tabstop;
+
+			cur_pos = textview->pos_x - textview->num_width;
+			cols_since_tabstop = cur_pos % textview->tab_width;
+			cols_to_tabstop = textview->tab_width - cols_since_tabstop;
+
+			while(cols_to_tabstop-- > 0) {
+				err = _textview_putc(textview, ' ');
+
+				if(err < 0) {
+					break;
+				}
+			}
+		} else {
+			err = _textview_putc(textview, *str);
+		}
+
+		if(err < 0) {
+			break;
+		}
+	}
+
+	return(len);
 }
 
 static int _textview_input(struct widget *widget, const int event)
@@ -148,14 +274,35 @@ static int _textview_draw_status(struct textview *textview)
 	return(0);
 }
 
+static int _textview_draw_snippet(struct textview *textview, struct snippet *snippet)
+{
+	struct line *line;
+
+	if(!textview || !snippet) {
+		return(-EINVAL);
+	}
+
+	line = snippet_get_first_line(snippet);
+
+	if(!line) {
+		return(-EINVAL);
+	}
+
+	_textview_reset(textview, line_get_number(line));
+
+	for( ; line; line = line_get_next(line)) {
+		_textview_puts(textview, line_get_data(line));
+	}
+
+	return(0);
+}
+
 static int _textview_redraw(struct widget *widget)
 {
 	struct textview *textview;
 	struct snippet *snip;
-	struct line *line;
 	int max_lines;
 	int err;
-	int y;
 
 	if(!widget) {
 		return(-EINVAL);
@@ -163,7 +310,6 @@ static int _textview_redraw(struct widget *widget)
 
 	textview = (struct textview*)widget;
 	max_lines = widget->height - 1;
-	y = 0;
 
 	widget_clear(widget, 0, 0, widget->width, widget->height);
 
@@ -178,16 +324,13 @@ static int _textview_redraw(struct widget *widget)
 	}
 
 	if(!err) {
-		for(line = snippet_get_first_line(snip); line; line = line_get_next(line)) {
-			_textview_draw_line(textview, y++, line);
-		}
-
+		err = _textview_draw_snippet(textview, snip);
 		snippet_free(&snip);
 	}
 
 	_textview_draw_status(textview);
 
-	return(0);
+	return(err);
 }
 
 static int _textview_free(struct widget *widget)
@@ -224,6 +367,10 @@ int textview_new(struct textview **textview)
 	((struct widget*)view)->resize = _textview_resize;
 	((struct widget*)view)->redraw = _textview_redraw;
 	((struct widget*)view)->free = _textview_free;
+
+	view->tab_width = config.tab_width;
+	view->pos_x = 0;
+	view->pos_y = 0;
 
 	*textview = view;
 	return(0);
