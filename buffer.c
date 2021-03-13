@@ -317,7 +317,7 @@ int snippet_new_from_string(struct snippet **snippet, const char *str,
 			break;
 		}
 
-		pos += line_get_length(line) + 1;
+		pos += line_get_length(line);
 		cur_line++;
 	}
 
@@ -530,8 +530,13 @@ static int _linelen(const char *str)
 
 	n = 0;
 
-	while(*str && *str != '\n') {
+	while(*str) {
 		n++;
+
+		if(*str == '\n') {
+			break;
+		}
+
 		str++;
 	}
 
