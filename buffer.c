@@ -490,10 +490,14 @@ int buffer_get_snippet_telex(struct buffer *buffer, struct telex *start, struct 
 	}
 
 	if(!end_pos) {
-		end_pos = buffer->data + buffer->size;
-		end_line = buffer_get_line_at(buffer, end_pos);
+		/* end_pos = buffer->data + buffer->size; */
+		end_line = buffer_get_line_at(buffer, buffer->data + buffer->size);
 	} else {
 		end_line = buffer_get_line_at(buffer, end_pos);
+
+		if(start_pos == end_pos) {
+			end_pos++;
+		}
 	}
 
 	start_line = buffer_get_line_at(buffer, start_pos);
