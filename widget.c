@@ -110,9 +110,11 @@ int widget_set_color(struct widget *widget, const ui_color_t color,
 	}
 
 	for(row = 0; row < h; row++) {
+#ifdef DEBUG
 		fprintf(stderr, "mvchgat(%d, %d, %d, 0, %d, NULL)\n",
 			widget->y + y + row, widget->x + x, w,
 			color);
+#endif /* DEBUG */
 		mvchgat(widget->y + y + row, widget->x + x,
 			w, 0, color, NULL);
 	}
