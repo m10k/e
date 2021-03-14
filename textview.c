@@ -22,6 +22,11 @@ struct textview {
 	int num_width;
 	int text_width;
 	int cur_line;
+	ui_color_t cur_color;
+	struct {
+		const char *start;
+		const char *end;
+	} sel;
 };
 
 static int _number_width(int number)
@@ -35,7 +40,8 @@ static int _number_width(int number)
 	return(width);
 }
 
-static int _textview_reset(struct textview *textview, const int first_line)
+static int _textview_reset(struct textview *textview, const int first_line,
+			   const char *sel_start, const char *sel_end)
 {
 	int last_line;
 
@@ -51,6 +57,10 @@ static int _textview_reset(struct textview *textview, const int first_line)
 	textview->text_width = ((struct widget*)textview)->width - textview->num_width;
 	textview->pos_x = textview->num_width;
 	textview->pos_y = 0;
+	textview->cur_color = UI_COLOR_NORMAL;
+
+	textview->sel.start = sel_start;
+	textview->sel.end = sel_end;
 
 	return(0);
 }
@@ -93,6 +103,10 @@ static int _textview_putc(struct textview *textview, const char chr)
 	}
 
 	if(chr == '\n') {
+		mvchgat(widget->y + textview->pos_y,
+			widget->x + textview->pos_x,
+			-1, 0, textview->cur_color, NULL);
+
 		textview->pos_x = textview->num_width;
 		textview->pos_y++;
 		textview->cur_line++;
@@ -102,7 +116,7 @@ static int _textview_putc(struct textview *textview, const char chr)
 			 "%c", chr);
 		mvchgat(widget->y + textview->pos_y,
 			widget->x + textview->pos_x,
-			1, 0, UI_COLOR_NORMAL, NULL);
+			1, 0, textview->cur_color, NULL);
 
 		textview->pos_x++;
 	}
@@ -122,6 +136,15 @@ static int _textview_puts(struct textview *textview, const char *str)
 		int err;
 
 		err = 0;
+
+		if(textview->sel.start && textview->sel.start == str) {
+			textview->cur_color = UI_COLOR_SELECTION;
+		} else if(textview->sel.end && textview->sel.end == str) {
+			textview->cur_color = UI_COLOR_NORMAL;
+		} else if(textview->sel.start && !textview->sel.end &&
+			  textview->sel.start != str) {
+			textview->cur_color = UI_COLOR_NORMAL;
+		}
 
 	        if(*str == '\t') {
 			int cur_pos;
@@ -277,10 +300,15 @@ static int _textview_draw_status(struct textview *textview)
 static int _textview_draw_snippet(struct textview *textview, struct snippet *snippet)
 {
 	struct line *line;
+	const char *sel_start;
+	const char *sel_end;
 
 	if(!textview || !snippet) {
 		return(-EINVAL);
 	}
+
+	sel_start = snippet_get_selection_start(snippet);
+	sel_end = snippet_get_selection_end(snippet);
 
 	line = snippet_get_first_line(snippet);
 
@@ -288,7 +316,7 @@ static int _textview_draw_snippet(struct textview *textview, struct snippet *sni
 		return(-EINVAL);
 	}
 
-	_textview_reset(textview, line_get_number(line));
+	_textview_reset(textview, line_get_number(line), sel_start, sel_end);
 
 	for( ; line; line = line_get_next(line)) {
 		_textview_puts(textview, line_get_data(line));
@@ -320,7 +348,8 @@ static int _textview_redraw(struct widget *widget)
 					       max_lines,
 					       &snip);
 	} else {
-		err = buffer_get_snippet(textview->buffer, 1, max_lines, &snip);
+		err = buffer_get_snippet(textview->buffer, 1, max_lines,
+					 NULL, NULL, &snip);
 	}
 
 	if(!err) {

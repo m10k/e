@@ -18,6 +18,7 @@ int buffer_clone(struct buffer *src, struct buffer **dst);
 
 int buffer_get_line_at(struct buffer *buffer, const char *pos);
 int buffer_get_snippet(struct buffer *buffer, const int start, const int lines,
+		       const char *sel_start, const char *sel_end,
 		       struct snippet **snippet);
 int buffer_get_snippet_telex(struct buffer *buffer, struct telex *start, struct telex *end,
 			     const int lines, struct snippet **snippet);
@@ -32,9 +33,15 @@ int          line_get_highlight(struct line*, int*, int*);
 
 int snippet_new(struct snippet**);
 int snippet_new_from_string(struct snippet **snippet, const char *str,
-			    const size_t len, const int first_line);
+			    const size_t len, const int first_line,
+			    const char *sel_start, const char *sel_end);
 int snippet_set_highlight(struct snippet*, int start_x, int start_y, int end_x, int end_y);
 int snippet_free(struct snippet**);
+
+int snippet_set_selection_start(struct snippet *snip, struct line *line, const char *start);
+int snippet_set_selection_end(struct snippet *snip, struct line *line, const char *end);
+const char *snippet_get_selection_start(struct snippet *snip);
+const char *snippet_get_selection_end(struct snippet *snip);
 
 int snippet_append_line(struct snippet*, struct line*);
 struct line* snippet_get_first_line(struct snippet*);

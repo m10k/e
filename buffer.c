@@ -20,6 +20,7 @@ struct line {
 	int no;
 	char *data;
 	size_t len;
+	const char *source;
 	int attrs;
 
 	int hl_start;
@@ -33,6 +34,11 @@ struct snippet {
 	struct line *last_line;
 	size_t lines;
 	long attrs;
+
+	struct {
+		const char *pos;
+		struct line *line;
+	} sel_start, sel_end;
 };
 
 static int _buffer_new(struct buffer **buffer)
@@ -288,7 +294,8 @@ struct line* snippet_get_first_line(struct snippet *snippet)
 }
 
 int snippet_new_from_string(struct snippet **snippet, const char *str,
-			    const size_t len, const int first_line)
+			    const size_t len, const int first_line,
+			    const char *sel_start, const char *sel_end)
 {
 	struct snippet *snip;
 	const char *pos;
@@ -307,9 +314,22 @@ int snippet_new_from_string(struct snippet **snippet, const char *str,
 
 	while(pos < str + len && *pos) {
 		struct line *line;
+		const char *line_start;
+		int line_len;
 
 		if(line_new(&line, cur_line, pos) < 0) {
 			break;
+		}
+
+		line_len = line_get_length(line);
+		line_start = line_get_data(line);
+
+		if(sel_start >= pos && sel_start < pos + line_len) {
+			snippet_set_selection_start(snip, line, sel_start - pos + line_start);
+		}
+
+		if(sel_end >= pos && sel_end < pos + line_len) {
+			snippet_set_selection_end(snip, line, sel_end - pos + line_start);
 		}
 
 		if(snippet_append_line(snip, line) < 0) {
@@ -317,7 +337,7 @@ int snippet_new_from_string(struct snippet **snippet, const char *str,
 			break;
 		}
 
-		pos += line_get_length(line);
+		pos += line_len;
 		cur_line++;
 	}
 
@@ -347,6 +367,7 @@ int snippet_free(struct snippet **snippet)
 }
 
 int buffer_get_snippet(struct buffer *buffer, const int start, const int lines,
+		       const char *sel_start, const char *sel_end,
 		       struct snippet **snippet)
 {
 	struct snippet *snip;
@@ -360,7 +381,8 @@ int buffer_get_snippet(struct buffer *buffer, const int start, const int lines,
 		return(err);
 	}
 
-	err = snippet_new_from_string(&snip, snip_start, snip_end - snip_start, start);
+	err = snippet_new_from_string(&snip, snip_start, snip_end - snip_start, start,
+				      sel_start, sel_end);
 
 	if(err < 0) {
 		return(err);
@@ -403,6 +425,48 @@ int buffer_get_col_at(struct buffer *buffer, const char *pos)
 	}
 
 	return(col);
+}
+
+int snippet_set_selection_start(struct snippet *snip, struct line *line, const char *start)
+{
+	if(!snip) {
+		return(-EINVAL);
+	}
+
+	snip->sel_start.pos = start;
+	snip->sel_start.line = line;
+
+	return(0);
+}
+
+int snippet_set_selection_end(struct snippet *snip, struct line *line, const char *end)
+{
+	if(!snip) {
+		return(-EINVAL);
+	}
+
+	snip->sel_end.pos = end;
+	snip->sel_end.line = line;
+
+	return(0);
+}
+
+const char *snippet_get_selection_start(struct snippet *snip)
+{
+	if(!snip) {
+		return(NULL);
+	}
+
+	return(snip->sel_start.pos);
+}
+
+const char *snippet_get_selection_end(struct snippet *snip)
+{
+	if(!snip) {
+		return(NULL);
+	}
+
+	return(snip->sel_end.pos);
 }
 
 int snippet_set_highlight(struct snippet *snip, int start_x, int start_y,
@@ -509,13 +573,14 @@ int buffer_get_snippet_telex(struct buffer *buffer, struct telex *start, struct 
 		return(-ERANGE);
 	}
 
-	err = buffer_get_snippet(buffer, start_line, end_line - start_line + 1, snippet);
+	err = buffer_get_snippet(buffer, start_line, end_line - start_line + 1,
+				 start_pos, end_pos, snippet);
 
 	if(err < 0) {
 		return(err);
 	}
 
-	snippet_set_highlight(*snippet, start_x, start_y, end_x, end_y);
+/*	snippet_set_highlight(*snippet, start_x, start_y, end_x, end_y); */
 
 	return(0);
 }
@@ -570,6 +635,7 @@ int line_new(struct line **line, int no, const char *str)
 	l->data[len] = 0;
 	l->no = no;
 	l->len = len;
+	l->source = str;
 	l->hl_start = -1;
 	l->hl_end = -1;
 
