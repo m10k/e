@@ -93,7 +93,7 @@ static int _textview_putc(struct textview *textview, const char chr)
 
 	widget = (struct widget*)textview;
 
-	if(textview->pos_x > widget->width) {
+	if(textview->pos_x >= widget->width) {
 		textview->pos_x = textview->num_width;
 		textview->pos_y++;
 	}
