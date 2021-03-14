@@ -611,6 +611,8 @@ int telex_append(struct telex *head, struct telex *tail)
 	for(cur = head; cur->next; cur = cur->next);
 	cur->next = tail;
 
+	telex_simplify(head);
+
 	return(0);
 }
 
@@ -691,4 +693,59 @@ const char* telex_lookup_multi(const char *start, const size_t size,
 	}
 
 	return(cur_pos);
+}
+
+static void _telex_simplify_number(struct telex *telex)
+{
+	struct telex *next;
+
+	next = telex->next;
+
+	if(telex->type != next->type) {
+		return;
+	}
+
+	if(telex->direction == 0 && next->direction == 0) {
+		/* telex absolute, next absolute */
+		return;
+	} else if(telex->direction == 0) {
+		/* telex absolute, next relative */
+		telex->data.number += next->direction *
+		        next->data.number;
+	} else if(next->direction == 0) {
+		/* telex relative, next absolute */
+		telex->direction = 0;
+		telex->data.number = next->data.number +
+			telex->direction * telex->data.number;
+	} else {
+		/* telex relative, next relative */
+		telex->data.number = telex->direction * telex->data.number +
+			next->direction * next->data.number;
+		telex->direction = 1;
+
+		if(telex->data.number < 0) {
+			telex->data.number = -telex->data.number;
+			telex->direction = -1;
+		}
+	}
+
+	telex->next = next->next;
+	next->next = NULL;
+
+	telex_free(&next);
+	return;
+}
+
+void telex_simplify(struct telex *telex)
+{
+	if(telex && telex->next) {
+		telex_simplify(telex->next);
+
+		if(telex->type == TELEX_LINE ||
+		   telex->type == TELEX_COLUMN) {
+			_telex_simplify_number(telex);
+		}
+	}
+
+	return;
 }
