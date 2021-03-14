@@ -21,19 +21,12 @@ struct line {
 	char *data;
 	size_t len;
 	const char *source;
-	int attrs;
-
-	int hl_start;
-	int hl_end;
 };
-
-#define SNIPPET_ATTR_HIGHLIGHTED (1 << 0)
 
 struct snippet {
 	struct line *first_line;
 	struct line *last_line;
 	size_t lines;
-	long attrs;
 
 	struct {
 		const char *pos;
@@ -239,7 +232,7 @@ static int _get_snippet_extent(struct buffer *buffer, const int start, const int
 	if(!end_ptr) {
 		/*
 		 * The specified line is behind the end of the buffer, so we
-		 * limit the snipped to the end of the buffer.
+		 * limit the snippet to the end of the buffer.
 		 */
 		end_ptr = buffer->data + buffer->size;
 	}
@@ -281,6 +274,7 @@ int snippet_append_line(struct snippet *snippet, struct line *line)
 	} else {
 		snippet->last_line->next = line;
 	}
+
 	snippet->last_line = line;
 	snippet->lines++;
 	line->next = NULL;
@@ -469,47 +463,6 @@ const char *snippet_get_selection_end(struct snippet *snip)
 	return(snip->sel_end.pos);
 }
 
-int snippet_set_highlight(struct snippet *snip, int start_x, int start_y,
-			  int end_x, int end_y)
-{
-	struct line *cur_line;
-
-	if(!snip) {
-		return(-EINVAL);
-	}
-
-	if(start_x <= 0 || start_y <= 0) {
-		/* end may be unset */
-		return(-ERANGE);
-	}
-
-	if(end_x <= 0 || end_y <= 0) {
-		end_x = start_x + 1;
-		end_y = start_y;
-	}
-
-	snip->attrs = SNIPPET_ATTR_HIGHLIGHTED;
-
-	for(cur_line = snip->first_line; cur_line; cur_line = cur_line->next) {
-		if(cur_line->no >= start_y && cur_line->no <= end_y) {
-			cur_line->attrs = SNIPPET_ATTR_HIGHLIGHTED;
-
-			cur_line->hl_start = 1;
-			cur_line->hl_end = 0;
-
-			if(cur_line->no == start_y) {
-				cur_line->hl_start = start_x;
-			}
-
-			if(cur_line->no == end_y) {
-				cur_line->hl_end = end_x;
-			}
-		}
-	}
-
-	return(0);
-}
-
 int buffer_get_snippet_telex(struct buffer *buffer, struct telex *start, struct telex *end,
 			     const int lines, struct snippet **snippet)
 {
@@ -519,10 +472,6 @@ int buffer_get_snippet_telex(struct buffer *buffer, struct telex *start, struct 
 	int end_line;
 	int center_line;
 	int err;
-	int start_x;
-	int start_y;
-	int end_x;
-	int end_y;
 
 	/* end may be NULL */
 	if(!buffer || !start || !snippet) {
@@ -543,19 +492,12 @@ int buffer_get_snippet_telex(struct buffer *buffer, struct telex *start, struct 
 	if(!end_pos) {
 		end_pos = buffer->data + buffer->size;
 		end_line = buffer_get_line_at(buffer, end_pos);
-		end_x = -1;
-		end_y = -1;
 	} else {
-		end_x = buffer_get_col_at(buffer, end_pos);
-		end_y = buffer_get_line_at(buffer, end_pos);
-		end_line = end_y;
+		end_line = buffer_get_line_at(buffer, end_pos);
 	}
 
 	start_line = buffer_get_line_at(buffer, start_pos);
 	center_line = start_line + (end_line - start_line) / 2;
-
-	start_x = buffer_get_col_at(buffer, start_pos);
-	start_y = start_line;
 
 	if(center_line - lines / 2 < start_line) {
 		start_line = center_line - lines / 2;
@@ -579,8 +521,6 @@ int buffer_get_snippet_telex(struct buffer *buffer, struct telex *start, struct 
 	if(err < 0) {
 		return(err);
 	}
-
-/*	snippet_set_highlight(*snippet, start_x, start_y, end_x, end_y); */
 
 	return(0);
 }
@@ -636,8 +576,6 @@ int line_new(struct line **line, int no, const char *str)
 	l->no = no;
 	l->len = len;
 	l->source = str;
-	l->hl_start = -1;
-	l->hl_end = -1;
 
 	*line = l;
 
@@ -689,20 +627,4 @@ int line_get_length(struct line *line)
 struct line* line_get_next(struct line *line)
 {
 	return(line ? line->next : NULL);
-}
-
-int line_get_highlight(struct line *line, int *from, int *to)
-{
-	if(!line) {
-		return(-EINVAL);
-	}
-
-	if(!(line->attrs & SNIPPET_ATTR_HIGHLIGHTED)) {
-		return(-ENOENT);
-	}
-
-	*from = line->hl_start;
-	*to = line->hl_end;
-
-	return(0);
 }

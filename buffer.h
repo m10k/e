@@ -29,13 +29,11 @@ int          line_get_number(struct line*);
 int          line_get_length(struct line*);
 const char*  line_get_data(struct line*);
 struct line* line_get_next(struct line*);
-int          line_get_highlight(struct line*, int*, int*);
 
 int snippet_new(struct snippet**);
 int snippet_new_from_string(struct snippet **snippet, const char *str,
 			    const size_t len, const int first_line,
 			    const char *sel_start, const char *sel_end);
-int snippet_set_highlight(struct snippet*, int start_x, int start_y, int end_x, int end_y);
 int snippet_free(struct snippet**);
 
 int snippet_set_selection_start(struct snippet *snip, struct line *line, const char *start);
