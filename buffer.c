@@ -487,6 +487,14 @@ int buffer_get_snippet_telex(struct buffer *buffer, struct telex *start, struct 
 
 	if(end) {
 		end_pos = telex_lookup(end, buffer->data, buffer->size, start_pos);
+
+		if(end_pos < start_pos) {
+			const char *swap;
+
+			swap = end_pos;
+			end_pos = start_pos;
+			start_pos = swap;
+		}
 	}
 
 	if(!end_pos) {
