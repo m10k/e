@@ -4,7 +4,7 @@
 #include <limits.h>
 #include "ui.h"
 #include "buffer.h"
-#include "telex.h"
+#include <telex/telex.h>
 #include "config.h"
 
 struct textview {

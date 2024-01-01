@@ -1,11 +1,11 @@
-OBJECTS = main.o config.o file.o buffer.o telex.o string.o \
+OBJECTS = main.o config.o file.o buffer.o string.o \
 	  window.o cmdbox.o editor.o vbox.o textview.o widget.o \
 	  container.o
 OUTPUT = e
 PHONY = clean
 
 CFLAGS = -Wall -std=c99 -pedantic -fPIC
-LIBS = -lncurses
+LIBS = -lncurses -ltelex
 
 all: $(OUTPUT)
 

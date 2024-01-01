@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <telex/telex.h>
 #include "editor.h"
 #include "buffer.h"
+#include "string.h"
 #include "ui.h"
 
 struct editor {
@@ -34,7 +36,7 @@ static int _cmdbox_set_text_from_telex(struct cmdbox *box, struct telex *telex)
 	}
 
 	max_chars = ((struct widget*)box)->width;
-	buffer = malloc(max_chars + 1);
+	buffer = calloc(max_chars + 1, sizeof(*buffer));
 
 	if(!buffer) {
 		return(-ENOMEM);
@@ -53,36 +55,32 @@ static int _cmdbox_set_text_from_telex(struct cmdbox *box, struct telex *telex)
 	return(0);
 }
 
-static int _try_append_telex(struct telex *head, struct telex *tail,
-			     struct buffer *buffer, struct telex **dest)
+static int _try_combine_telex(struct telex *head, struct telex *tail,
+                              struct buffer *buffer, struct telex **dest)
 {
+	struct telex *combined;
 	const char *start;
 	size_t size;
+	int error;
 
-	if(!head || !tail || !buffer) {
+	if (!head || !tail || !buffer) {
 		return(-EINVAL);
 	}
 
+	error = 0;
 	start = buffer_get_data(buffer);
 	size = buffer_get_size(buffer);
 
-	if(!telex_lookup_multi(start, size, NULL, 2, head, tail)) {
-	        return(-EBADMSG);
+	/* if lookup fails, the expressions can't be combined */
+	if (!telex_lookup_multi(start, size, NULL, 2, head, tail)) {
+	        return -EBADMSG;
 	}
 
-	if(dest) {
-		/*
-		 * If dest was provided, we're supposed to
-		 * clone before appending
-		 */
-		if(telex_clone(head, &head) < 0) {
-			return(-ENOMEM);
-		}
-
-		*dest = head;
+	if (dest) {
+		error = telex_combine(&combined, head, tail);
 	}
 
-	return(telex_append(head, tail));
+	return error;
 }
 
 static int _source_start_change(struct widget *widget,
@@ -94,7 +92,7 @@ static int _source_start_change(struct widget *widget,
 	struct string *buffer;
 	struct telex *telex;
 	const char *expr_ptr;
-	const char *err_ptr;
+	struct telex_error *errors;
 	int err;
 
 	if(!widget || !user_data || !data) {
@@ -115,12 +113,10 @@ static int _source_start_change(struct widget *widget,
 	}
 
 	expr_ptr = string_get_data(buffer);
-	err = telex_parse(expr_ptr, &telex, &err_ptr);
+	err = telex_parse(&telex, expr_ptr, &errors);
 
 	if(err) {
-		cmdbox_highlight(box, UI_COLOR_DELETION,
-				 err_ptr ? (int)(err_ptr - expr_ptr) : 0,
-				 err_ptr ? (int)strlen(err_ptr) : -1);
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
 	} else {
 		const char *start;
 		size_t size;
@@ -128,32 +124,16 @@ static int _source_start_change(struct widget *widget,
 		start = buffer_get_data(editor->prebuffer);
 		size = buffer_get_size(editor->prebuffer);
 
-		if(telex->direction && editor->source_start) {
-			err = _try_append_telex(editor->source_start, telex,
-						editor->prebuffer, NULL);
-
-			if(err < 0) {
-				cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
-				telex_free(&telex);
-			} else {
-				cmdbox_clear(box);
-				widget_redraw((struct widget*)editor->preedit);
-			}
-
-			return(err);
-		}
-
-		if(!telex_lookup(telex, start, size, start)) {
+		if (!telex_lookup(telex, start, size, start)) {
+			telex_free(&telex);
 			cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
-			return(0);
+		} else {
+			telex_free(&editor->source_start);
+			editor->source_start = telex;
+
+			textview_set_selection_start(editor->preedit, telex);
+			cmdbox_clear(box);
 		}
-
-		telex_free(&(editor->source_start));
-		editor->source_start = telex;
-
-		textview_set_selection_start(editor->preedit, telex);
-
-		cmdbox_clear(box);
 	}
 
 	return(0);
@@ -168,7 +148,7 @@ static int _source_end_change(struct widget *widget,
 	struct string *buffer;
 	struct telex *telex;
 	const char *expr_ptr;
-	const char *err_ptr;
+	struct telex_error *errors;
 	int err;
 
 	if(!widget || !user_data || !data) {
@@ -189,12 +169,10 @@ static int _source_end_change(struct widget *widget,
 	}
 
 	expr_ptr = string_get_data(buffer);
-	err = telex_parse(expr_ptr, &telex, &err_ptr);
+	err = telex_parse(&telex, expr_ptr, &errors);
 
 	if(err) {
-		cmdbox_highlight(box, UI_COLOR_DELETION,
-				 err_ptr ? (int)(err_ptr - expr_ptr) : 0,
-				 err_ptr ? (int)strlen(err_ptr) : -1);
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
 	} else {
 		const char *start;
 		size_t size;
@@ -202,58 +180,19 @@ static int _source_end_change(struct widget *widget,
 		start = buffer_get_data(editor->prebuffer);
 		size = buffer_get_size(editor->prebuffer);
 
-		if(telex->direction && editor->source_end) {
-			/*
-			 * Try to make this expression relative to the
-			 * previous selection end.
-			 */
-			err = _try_append_telex(editor->source_end, telex,
-						editor->prebuffer, NULL);
-
-			if(err < 0) {
-				cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
-				telex_free(&telex);
-			} else {
-				cmdbox_clear(box);
-				widget_redraw((struct widget*)editor->preedit);
-			}
-
-			return(err);
-		} else if(telex->direction && editor->source_start) {
-			/*
-			 * If end of the selection isn't set, try to make this
-			 * expression relative to the selection start
-			 */
-
-			err = _try_append_telex(editor->source_start, telex,
-						editor->prebuffer, &(editor->source_end));
-
-			if(err < 0) {
-				cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
-				telex_free(&telex);
-			} else {
-				cmdbox_clear(box);
-				textview_set_selection_end(editor->preedit, editor->source_end);
-				widget_redraw((struct widget*)editor->preedit);
-			}
-
-			return(err);
-		}
-
-		if(!telex_lookup(telex, start, size, start)) {
+		if (!telex_lookup(telex, start, size, start)) {
+			telex_free(&telex);
 			cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
-			return(0);
+		} else {
+			telex_free(&editor->source_end);
+			editor->source_end = telex;
+
+			textview_set_selection_end(editor->preedit, telex);
+			cmdbox_clear(box);
 		}
-
-		telex_free(&(editor->source_end));
-		editor->source_end = telex;
-
-		textview_set_selection_end(editor->preedit, telex);
-
-		cmdbox_clear(box);
 	}
 
-	return(0);
+	return 0;
 }
 
 static int _destination_start_change(struct widget *widget,
@@ -265,7 +204,7 @@ static int _destination_start_change(struct widget *widget,
 	struct string *buffer;
 	struct telex *telex;
 	const char *expr_ptr;
-	const char *err_ptr;
+	struct telex_error *errors;
 	int err;
 
 	if(!widget || !user_data || !data) {
@@ -286,12 +225,10 @@ static int _destination_start_change(struct widget *widget,
 	}
 
 	expr_ptr = string_get_data(buffer);
-	err = telex_parse(expr_ptr, &telex, &err_ptr);
+	err = telex_parse(&telex, expr_ptr, &errors);
 
 	if(err) {
-		cmdbox_highlight(box, UI_COLOR_DELETION,
-				 err_ptr ? (int)(err_ptr - expr_ptr) : 0,
-				 err_ptr ? (int)strlen(err_ptr) : -1);
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
 	} else {
 		const char *start;
 		size_t size;
@@ -299,18 +236,23 @@ static int _destination_start_change(struct widget *widget,
 		start = buffer_get_data(editor->postbuffer);
 		size = buffer_get_size(editor->postbuffer);
 
-		if(telex->direction && editor->destination_start) {
-			err = _try_append_telex(editor->destination_start, telex,
-						editor->postbuffer, NULL);
+		if(editor->destination_start) {
+			struct telex *combined_telex;
+
+			err = _try_combine_telex(editor->destination_start, telex,
+						 editor->postbuffer, &combined_telex);
 
 			if(err < 0) {
 				cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
-				telex_free(&telex);
 			} else {
 				cmdbox_clear(box);
 				widget_redraw((struct widget*)editor->postedit);
+
+				telex_free(&editor->destination_start);
+				editor->destination_start = combined_telex;
 			}
 
+			telex_free(&telex);
 			return(err);
 		}
 
@@ -319,7 +261,7 @@ static int _destination_start_change(struct widget *widget,
 			return(0);
 		}
 
-		telex_free(&(editor->destination_start));
+		telex_free(&editor->destination_start);
 		editor->destination_start = telex;
 
 		widget_set_visible((struct widget*)editor->postedit, TRUE);
@@ -340,7 +282,7 @@ static int _destination_end_change(struct widget *widget,
 	struct string *buffer;
 	struct telex *telex;
 	const char *expr_ptr;
-	const char *err_ptr;
+	struct telex_error *errors;
 	int err;
 
 	if(!widget || !user_data || !data) {
@@ -361,12 +303,10 @@ static int _destination_end_change(struct widget *widget,
 	}
 
 	expr_ptr = string_get_data(buffer);
-	err = telex_parse(expr_ptr, &telex, &err_ptr);
+	err = telex_parse(&telex, expr_ptr, &errors);
 
 	if(err) {
-		cmdbox_highlight(box, UI_COLOR_DELETION,
-				 err_ptr ? (int)(err_ptr - expr_ptr) : 0,
-				 err_ptr ? (int)strlen(err_ptr) : -1);
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
 	} else {
 		const char *start;
 		size_t size;
@@ -374,41 +314,46 @@ static int _destination_end_change(struct widget *widget,
 		start = buffer_get_data(editor->postbuffer);
 		size = buffer_get_size(editor->postbuffer);
 
-		if(telex->direction && editor->destination_end) {
+		if(editor->destination_end) {
+			struct telex *combined_telex;
+
 			/*
 			 * Try to make this expression relative to the
 			 * previous selection end.
 			 */
-			err = _try_append_telex(editor->destination_end, telex,
-						editor->postbuffer, NULL);
+			err = _try_combine_telex(editor->destination_end, telex,
+						 editor->postbuffer, &combined_telex);
 
 			if(err < 0) {
 				cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
-				telex_free(&telex);
 			} else {
 				cmdbox_clear(box);
 				widget_redraw((struct widget*)editor->postedit);
+
+				telex_free(&editor->destination_end);
+				editor->destination_end = combined_telex;
 			}
 
+			telex_free(&telex);
 			return(err);
-		} else if(telex->direction && editor->destination_start) {
+		} else if(editor->destination_start) {
 			/*
 			 * If end of the selection isn't set, try to make this
 			 * expression relative to the selection start
 			 */
 
-			err = _try_append_telex(editor->destination_start, telex,
-						editor->postbuffer, &(editor->destination_end));
+			err = _try_combine_telex(editor->destination_start, telex,
+						 editor->postbuffer, &(editor->destination_end));
 
 			if(err < 0) {
 				cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
-				telex_free(&telex);
 			} else {
 				cmdbox_clear(box);
 				textview_set_selection_end(editor->postedit, editor->destination_end);
 				widget_redraw((struct widget*)editor->postedit);
 			}
 
+			telex_free(&telex);
 			return(err);
 		}
 
@@ -417,7 +362,7 @@ static int _destination_end_change(struct widget *widget,
 			return(0);
 		}
 
-		telex_free(&(editor->destination_end));
+		telex_free(&editor->destination_end);
 		editor->destination_end = telex;
 
 		widget_set_visible((struct widget*)editor->postedit, TRUE);
@@ -558,13 +503,11 @@ int editor_new(struct editor **editor)
 		return(-EINVAL);
 	}
 
-	edit = malloc(sizeof(*edit));
+	edit = calloc(1, sizeof(*edit));
 
 	if(!edit) {
 		return(-ENOMEM);
  	}
-
-	memset(edit, 0, sizeof(*edit));
 
 	err = _editor_init_ui(edit);
 

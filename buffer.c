@@ -7,7 +7,7 @@
 #include "buffer.h"
 #include "file.h"
 #include "config.h"
-#include "telex.h"
+#include <telex/telex.h>
 
 struct buffer {
 	struct file *file;
@@ -201,35 +201,43 @@ size_t buffer_get_size(struct buffer *buffer)
 static int _get_snippet_extent(struct buffer *buffer, const int start, const int lines,
 			       const char **snip_start, const char **snip_end)
 {
-	struct telex pos_start = {
-		.next = NULL,
-		.type = TELEX_LINE,
-		.direction = 0,
-		.data.number = start
-	};
-	struct telex pos_end = {
-		.next = NULL,
-		.type = TELEX_LINE,
-		.direction = 1,
-		.data.number = lines
-	};
-
+	struct telex_error *errors;
+	struct telex *start_telex;
+	struct telex *end_telex;
 	const char *start_ptr;
 	const char *end_ptr;
+	char telex_str[16];
+	int error;
 
 	if(!buffer || !snip_start || !snip_end) {
 		return(-EINVAL);
 	}
 
-	start_ptr = telex_lookup(&pos_start, buffer->data, buffer->size, buffer->data);
+        error = 0;
+	start_telex = NULL;
+	end_telex = NULL;
 
-	if(!start_ptr) {
-		return(-ERANGE);
+	snprintf(telex_str, sizeof(telex_str), ":%d", start);
+	if (telex_parse(&start_telex, telex_str, &errors) < 0) {
+		fprintf(stderr, "Could not parse telex \"%s\"\n", telex_str);
+		error = -EINVAL;
+		goto cleanup;
 	}
 
-	end_ptr = telex_lookup(&pos_end, buffer->data, buffer->size, start_ptr);
+	snprintf(telex_str, sizeof(telex_str), ":%d", start + lines);
+	if (telex_parse(&end_telex, telex_str, &errors) < 0) {
+		fprintf(stderr, "Could not parse telex \"%s\"\n", telex_str);
+		error = -EINVAL;
+		goto cleanup;
+	}
 
-	if(!end_ptr) {
+	if (!(start_ptr = telex_lookup(start_telex, buffer->data, buffer->size, buffer->data))) {
+		fprintf(stderr, "Could not lookup start\n");
+		error = -ERANGE;
+		goto cleanup;
+	}
+
+	if (!(end_ptr = telex_lookup(end_telex, buffer->data, buffer->size, buffer->data))) {
 		/*
 		 * The specified line is behind the end of the buffer, so we
 		 * limit the snippet to the end of the buffer.
@@ -237,10 +245,20 @@ static int _get_snippet_extent(struct buffer *buffer, const int start, const int
 		end_ptr = buffer->data + buffer->size;
 	}
 
-	*snip_start = start_ptr;
-	*snip_end = end_ptr;
+cleanup:
+	if (error == 0) {
+		*snip_start = start_ptr;
+		*snip_end = end_ptr;
+	}
 
-	return(0);
+	if (start_telex) {
+		telex_free(&start_telex);
+	}
+	if (end_telex) {
+		telex_free(&end_telex);
+	}
+
+	return error;
 }
 
 int snippet_new(struct snippet **snippet)
@@ -369,15 +387,15 @@ int buffer_get_snippet(struct buffer *buffer, const int start, const int lines,
 	const char *snip_end;
 	int err;
 
-	err = _get_snippet_extent(buffer, start, lines, &snip_start, &snip_end);
+	snip_start = NULL;
+	snip_end = NULL;
 
+	err = _get_snippet_extent(buffer, start, lines, &snip_start, &snip_end);
 	if(err < 0) {
 		return(err);
 	}
-
 	err = snippet_new_from_string(&snip, snip_start, snip_end - snip_start, start,
 				      sel_start, sel_end);
-
 	if(err < 0) {
 		return(err);
 	}
@@ -486,7 +504,7 @@ int buffer_get_snippet_telex(struct buffer *buffer, struct telex *start, struct 
 	}
 
 	if(end) {
-		end_pos = telex_lookup(end, buffer->data, buffer->size, start_pos);
+		end_pos = telex_lookup(end, buffer->data, buffer->size, telex_is_relative(end) ? start_pos : buffer->data);
 
 		if(end_pos < start_pos) {
 			const char *swap;
@@ -507,7 +525,6 @@ int buffer_get_snippet_telex(struct buffer *buffer, struct telex *start, struct 
 			end_pos++;
 		}
 	}
-
 	start_line = buffer_get_line_at(buffer, start_pos);
 	center_line = start_line + (end_line - start_line) / 2;
 
