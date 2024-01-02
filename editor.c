@@ -260,7 +260,7 @@ struct variable* _variable_new(const char *name, const char *value)
 
 	if ((var = calloc(1, sizeof(*var)))) {
 		if (!(var->name = strdup(name)) ||
-		    !(var->name = strdup(value))) {
+		    !(var->value = strdup(value))) {
 			_variable_free(&var);
 		}
 	}
