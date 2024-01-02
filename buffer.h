@@ -23,6 +23,12 @@ int buffer_get_snippet(struct buffer *buffer, const int start, const int lines,
 int buffer_get_snippet_telex(struct buffer *buffer, struct telex *start, struct telex *end,
 			     const int lines, struct snippet **snippet);
 
+int buffer_get_substring(struct buffer *buffer, struct telex *src_start, struct telex *src_end,
+			 const char **substring, size_t *substring_length);
+
+int buffer_lookup_start_end(struct buffer *buffer, struct telex *start_telex, struct telex *end_telex,
+			    const char **start, const char **end);
+
 int          line_new(struct line **line, int no, const char *str);
 int          line_free(struct line**);
 int          line_get_number(struct line*);

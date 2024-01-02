@@ -4,7 +4,7 @@ OBJECTS = main.o config.o file.o buffer.o string.o \
 OUTPUT = e
 PHONY = clean
 
-CFLAGS = -Wall -std=c99 -pedantic -fPIC
+CFLAGS = -Wall -pedantic -fPIC
 LIBS = -lncurses -ltelex
 
 all: $(OUTPUT)

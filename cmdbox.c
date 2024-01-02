@@ -217,6 +217,9 @@ static int _key_handler_single(struct cmdbox *box, const int key)
 		break;
 
 	case 3:   /* ^C */
+		widget_emit_signal((struct widget*)box,
+				   "read_requested",
+				   box->buffer);
 		break;
 
 	case 22:  /* ^V */
@@ -548,6 +551,7 @@ int cmdbox_new(struct cmdbox **cmdbox)
 
 	widget_add_signal((struct widget*)box, "selection_start_changed");
 	widget_add_signal((struct widget*)box, "selection_end_changed");
+	widget_add_signal((struct widget*)box, "read_requested");
 
 	*cmdbox = box;
 

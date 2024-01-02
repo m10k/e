@@ -7,6 +7,13 @@
 #include "string.h"
 #include "ui.h"
 
+/* FIXME: Variables should be stored in a hashmap once we have one */
+struct variable {
+	struct variable *next;
+	char *name;
+	char *value;
+};
+
 struct editor {
 	struct window *window;
 	struct vbox *vbox;
@@ -17,6 +24,8 @@ struct editor {
 
 	struct telex *sel_start;
 	struct telex *sel_end;
+
+	struct variable *variables;
 
 	int readonly;
 };
@@ -163,6 +172,146 @@ static int _selection_end_change(struct widget *widget,
 	return 0;
 }
 
+static int _read_requested(struct widget *widget,
+			   void *user_data,
+			   void *data)
+{
+	struct cmdbox *box;
+	struct editor *editor;
+	const char *substring;
+	size_t substring_len;
+	const char *var;
+	int err;
+
+	box = (struct cmdbox*)widget;
+	editor = (struct editor*)user_data;
+
+        cmdbox_highlight(box, UI_COLOR_DELETION, 0, 0);
+
+        if(cmdbox_get_length(box) == 0) {
+		/* user didn't enter a variable name */
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+                return 0;
+        }
+
+	var = cmdbox_get_text(box);
+
+	/*
+	 * Read the data that the selection points to and save it in a
+	 * variable with the name in `dst'.
+	 */
+
+	if ((err = buffer_get_substring(editor->buffer, editor->sel_start, editor->sel_end,
+					&substring, &substring_len)) < 0) {
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+		return err;
+	}
+
+	fprintf(stderr, "Setting variable \"%s\" to \"%s\"\n", var, substring);
+
+	if ((err = editor_set_var(editor, var, substring)) < 0) {
+		free((void*)substring);
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+		return err;
+	}
+
+	cmdbox_clear(box);
+	return 0;
+}
+
+struct variable* _editor_find_variable(struct editor *editor, const char *name)
+{
+	struct variable *var;
+
+	for (var = editor->variables; var; var = var->next) {
+		if (strcmp(var->name, name) == 0) {
+			return var;
+		}
+	}
+
+	return NULL;
+}
+
+int _variable_free(struct variable **var)
+{
+	struct variable *next;
+
+	if (!var || !*var) {
+		return -EINVAL;
+	}
+
+	if ((*var)->name) {
+		free((*var)->name);
+	}
+	if ((*var)->value) {
+		free((*var)->value);
+	}
+
+	next = (*var)->next;
+	free(*var);
+	*var = next;
+
+	return 0;
+}
+
+struct variable* _variable_new(const char *name, const char *value)
+{
+	struct variable *var;
+
+	if ((var = calloc(1, sizeof(*var)))) {
+		if (!(var->name = strdup(name)) ||
+		    !(var->name = strdup(value))) {
+			_variable_free(&var);
+		}
+	}
+
+	return var;
+}
+
+int _variable_set(struct variable *var, const char *value)
+{
+	char *value_dup;
+
+	if (!(value_dup = strdup(value))) {
+		return -ENOMEM;
+	}
+
+	free(var->value);
+	var->value = value_dup;
+
+	return 0;
+}
+
+int editor_set_var(struct editor *editor, const char *name, const char *value)
+{
+	struct variable *var;
+
+	if ((var = _editor_find_variable(editor, name))) {
+		return _variable_set(var, value);
+	}
+
+	if (!(var = _variable_new(name, value))) {
+		return -ENOMEM;
+	}
+
+	var->next = editor->variables;
+	editor->variables = var;
+
+	return 0;
+}
+
+int editor_get_var(struct editor *editor, const char *name, const char **value)
+{
+	struct variable *var;
+
+	if (!(var = _editor_find_variable(editor, name))) {
+		return -ENOENT;
+	}
+
+	*value = var->value;
+	return 0;
+}
+
 static int _editor_init_ui(struct editor *editor)
 {
 	int err;
@@ -196,6 +345,11 @@ static int _editor_init_ui(struct editor *editor)
 					    _selection_end_change,
 					    editor)) < 0) {
 		return(err);
+	} else if ((err = widget_add_handler((struct widget*)editor->cmdbox,
+					     "read_requested",
+					     _read_requested,
+					     editor)) < 0) {
+		return err;
 	}
 
 	widget_resize((struct widget*)editor->window);

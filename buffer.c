@@ -657,3 +657,84 @@ struct line* line_get_next(struct line *line)
 {
 	return(line ? line->next : NULL);
 }
+
+static int _buffer_lookup_start_end(struct buffer *buffer,
+				    struct telex *start_telex, struct telex *end_telex,
+				    const char **start, const char **end)
+{
+	const char *buffer_start;
+	size_t buffer_size;
+	const char *start_ptr;
+	const char *end_ptr;
+
+	if (!buffer || !start || !start_telex || !start || !end) {
+		return -EINVAL;
+	}
+
+	buffer_start = buffer_get_data(buffer);
+	buffer_size = buffer_get_size(buffer);
+
+	if (!(start_ptr = telex_lookup(start_telex, buffer_start, buffer_size, buffer_start))) {
+		return -ERANGE;
+	}
+
+	/*
+	 * If `end_telex' is NULL, we assume the user wants everything to the end of the buffer,
+	 * otherwise we assume that the user intends `end_telex' to be a valid expression.
+	 */
+	if (!end_telex) {
+		end_ptr = buffer_start + buffer_size;
+	} else if (!(end_ptr = telex_lookup(end_telex, buffer_start, buffer_size,
+					    telex_is_relative(end_telex) ? start_ptr : buffer_start))) {
+		return -ERANGE;
+	}
+
+	/* The second expression does not necessarily evaluate to a location behind the start */
+	if (start_ptr < end_ptr) {
+		*start = start_ptr;
+		*end = end_ptr;
+	} else {
+		*start = end_ptr;
+		*end = start_ptr;
+	}
+
+	return 0;
+}
+
+int buffer_get_substring(struct buffer *buffer, struct telex *src_start, struct telex *src_end,
+			 const char **substring_dst, size_t *substring_size_dst)
+{
+	const char *src_start_ptr;
+	const char *src_end_ptr;
+	ssize_t required_size;
+	ssize_t substring_size;
+	char *substring;
+        int error;
+
+	if (!buffer || !src_start || !substring_dst) {
+		return -EINVAL;
+	}
+
+	if ((error = _buffer_lookup_start_end(buffer, src_start, src_end,
+					      &src_start_ptr, &src_end_ptr)) < 0) {
+		return error;
+	}
+
+	required_size = (ssize_t)(src_end_ptr - src_start_ptr);
+	substring_size = required_size + 1;
+
+	if (substring_size < required_size) {
+		return -ERANGE;
+	}
+
+	if (!(substring = malloc(substring_size))) {
+		return -ENOMEM;
+	}
+
+	memcpy(substring, src_start_ptr, required_size);
+	substring[required_size] = 0;
+
+	*substring_dst = substring;
+	*substring_size_dst = substring_size;
+	return 0;
+}
