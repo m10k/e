@@ -30,6 +30,8 @@ struct editor {
 	int readonly;
 };
 
+struct variable* _editor_find_variable(struct editor *editor, const char *name);
+
 static int _cmdbox_set_text_from_telex(struct cmdbox *box, struct telex *telex)
 {
 	int max_chars;
@@ -168,6 +170,52 @@ static int _selection_end_change(struct widget *widget,
 			cmdbox_clear(box);
 		}
 	}
+
+	return 0;
+}
+
+static int _write_requested(struct widget *widget,
+			    void *user_data,
+			    void *data)
+{
+	struct cmdbox *box;
+	struct editor *editor;
+	const char *var_name;
+	const char *var_value;
+	int err;
+
+	box = (struct cmdbox*)widget;
+	editor = (struct editor*)user_data;
+
+	if (!editor->sel_start) {
+		fprintf(stderr, "Don't know where to insert variable\n");
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+		return 0;
+	}
+
+	if (cmdbox_get_length(box) == 0) {
+		fprintf(stderr, "Don't know which variable to insert\n");
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+		return 0;
+	}
+
+	var_name = cmdbox_get_text(box);
+	if (editor_get_var(editor, var_name, &var_value) < 0) {
+		fprintf(stderr, "No variable \"%s\"\n", var_name);
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, strlen(var_name));
+		return 0;
+	}
+
+	fprintf(stderr, "Inserting variable \"%s\" into buffer\n", var_name);
+	if ((err = buffer_insert(editor->buffer, var_value, editor->sel_start)) < 0) {
+		fprintf(stderr, "Could not insert variable \"%s\": %s [%d]\n",
+			var_name, strerror(-err), -err);
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+		return 0;
+	}
+
+	cmdbox_clear(box);
+	widget_redraw((struct widget*)editor->window);
 
 	return 0;
 }
@@ -348,6 +396,11 @@ static int _editor_init_ui(struct editor *editor)
 	} else if ((err = widget_add_handler((struct widget*)editor->cmdbox,
 					     "read_requested",
 					     _read_requested,
+					     editor)) < 0) {
+		return err;
+	} else if ((err = widget_add_handler((struct widget*)editor->cmdbox,
+					     "write_requested",
+					     _write_requested,
 					     editor)) < 0) {
 		return err;
 	}
