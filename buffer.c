@@ -658,6 +658,24 @@ struct line* line_get_next(struct line *line)
 	return(line ? line->next : NULL);
 }
 
+static int _buffer_lookup_telex(struct buffer *buffer, struct telex *telex, const char **result)
+{
+	const char *location;
+
+	if (!buffer || !telex || !result) {
+		return -EINVAL;
+	}
+
+	location = telex_lookup(telex, buffer->data, buffer->size, buffer->data);
+
+	if (!location) {
+		return -ENOENT;
+	}
+
+	*result = location;
+	return 0;
+}
+
 static int _buffer_lookup_start_end(struct buffer *buffer,
 				    struct telex *start_telex, struct telex *end_telex,
 				    const char **start, const char **end)
@@ -736,5 +754,40 @@ int buffer_get_substring(struct buffer *buffer, struct telex *src_start, struct 
 
 	*substring_dst = substring;
 	*substring_size_dst = substring_size;
+	return 0;
+}
+
+int buffer_insert(struct buffer *buffer, const char *insertion, struct telex *start)
+{
+	const char *insertion_pos;
+	size_t insertion_len;
+	size_t insertion_offset;
+	size_t suffix_len;
+	char *new_data;
+	size_t new_size;
+
+	if (_buffer_lookup_telex(buffer, start, &insertion_pos) < 0) {
+		return -ERANGE;
+	}
+
+	insertion_offset = (size_t)(insertion_pos - buffer->data);
+	insertion_len = strlen(insertion);
+	suffix_len = buffer->size - insertion_offset;
+	new_size = buffer->size + insertion_len;
+
+	if (!(new_data = realloc(buffer->data, new_size))) {
+		return -ENOMEM;
+	}
+
+	memcpy(new_data + insertion_offset + insertion_len,
+	       new_data + insertion_offset,
+	       suffix_len);
+	memcpy(new_data + insertion_offset,
+	       insertion,
+	       insertion_len);
+
+	buffer->data = new_data;
+	buffer->size = new_size;
+
 	return 0;
 }
