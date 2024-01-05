@@ -339,6 +339,25 @@ static int _read_requested(struct widget *widget,
 	return 0;
 }
 
+static int _save_requested(struct widget *widget,
+			   void *user_data,
+			   void *data)
+{
+	struct cmdbox *box;
+	struct editor *editor;
+	int err;
+
+	box = (struct cmdbox*)widget;
+	editor = (struct editor*)user_data;
+
+	if ((err = buffer_save(editor->buffer)) < 0) {
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+		return err;
+	}
+
+	return 0;
+}
+
 struct variable* _editor_find_variable(struct editor *editor, const char *name)
 {
 	struct variable *var;
@@ -483,6 +502,11 @@ static int _editor_init_ui(struct editor *editor)
 	} else if ((err = widget_add_handler((struct widget*)editor->cmdbox,
 					     "oinsert_requested",
 					     _oinsert_requested,
+					     editor)) < 0) {
+		return err;
+	} else if ((err = widget_add_handler((struct widget*)editor->cmdbox,
+					     "save_requested",
+					     _save_requested,
 					     editor)) < 0) {
 		return err;
 	}
