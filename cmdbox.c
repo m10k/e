@@ -200,6 +200,12 @@ static int _key_handler_single(struct cmdbox *box, const int key)
 		_box_set_cursor(box, 0);
 		break;
 
+	case 19:  /* ^S */
+		widget_emit_signal((struct widget*)box,
+				   "save_requested",
+				   box->buffer);
+		break;
+
 	case 4:   /* ^D */
 		_box_remove_cursor_right(box);
 		break;
@@ -565,6 +571,7 @@ int cmdbox_new(struct cmdbox **cmdbox)
 	widget_add_signal((struct widget*)box, "write_requested");
 	widget_add_signal((struct widget*)box, "insert_requested");
 	widget_add_signal((struct widget*)box, "oinsert_requested");
+	widget_add_signal((struct widget*)box, "save_requested");
 
 	*cmdbox = box;
 
