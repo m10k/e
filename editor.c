@@ -86,9 +86,10 @@ static int _selection_start_change(struct widget *widget,
 	cmdbox_highlight(box, UI_COLOR_DELETION, 0, 0);
 
 	/* empty cmdbox? -> set text from current selection */
-	if(cmdbox_get_length(box) == 0) {
+	if (cmdbox_get_length(box) == 0) {
 		_cmdbox_set_text_from_telex(box, editor->sel_start);
-		return(0);
+		textview_set_selection_start(editor->edit, NULL);
+		return 0;
 	}
 
 	expr_ptr = string_get_data(buffer);
@@ -142,15 +143,16 @@ static int _selection_end_change(struct widget *widget,
 	cmdbox_highlight(box, UI_COLOR_DELETION, 0, 0);
 
 	/* empty cmdbox? -> set text from current selection */
-	if(cmdbox_get_length(box) == 0) {
+	if (cmdbox_get_length(box) == 0) {
 		_cmdbox_set_text_from_telex(box, editor->sel_end);
-		return(0);
+		textview_set_selection_end(editor->edit, NULL);
+		return 0;
 	}
 
 	expr_ptr = string_get_data(buffer);
 	err = telex_parse(&telex, expr_ptr, &errors);
 
-	if(err) {
+	if (err) {
 		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
 	} else {
 		const char *start;
