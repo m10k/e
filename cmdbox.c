@@ -238,7 +238,12 @@ static int _key_handler_single(struct cmdbox *box, const int key)
 		widget_emit_signal((struct widget*)box,
 				   "insert_requested",
 				   box->buffer);
+		break;
 
+	case 14:  /* ^N */
+		widget_emit_signal((struct widget*)box,
+				   "oinsert_requested",
+				   box->buffer);
 		break;
 
 	case 27:
@@ -559,6 +564,7 @@ int cmdbox_new(struct cmdbox **cmdbox)
 	widget_add_signal((struct widget*)box, "read_requested");
 	widget_add_signal((struct widget*)box, "write_requested");
 	widget_add_signal((struct widget*)box, "insert_requested");
+	widget_add_signal((struct widget*)box, "oinsert_requested");
 
 	*cmdbox = box;
 
