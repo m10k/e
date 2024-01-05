@@ -791,3 +791,52 @@ int buffer_insert(struct buffer *buffer, const char *insertion, struct telex *st
 
 	return 0;
 }
+
+int buffer_overwrite(struct buffer *buffer, const char *insertion, struct telex *start, struct telex *end)
+{
+	const char *dst_start;
+	const char *dst_end;
+	size_t offset_start;
+	size_t offset_end;
+	size_t src_size;
+	size_t dst_size;
+	ssize_t required_space;
+
+	/* if end was specified, overwrite only from start to end, otherwise overwrite as much as needed */
+
+	if (_buffer_lookup_telex(buffer, start, &dst_start) < 0) {
+		return -ERANGE;
+	}
+
+	if (!end) {
+		dst_end = buffer->data + buffer->size;
+	} else if (_buffer_lookup_telex(buffer, end, &dst_end) < 0) {
+		return -ERANGE;
+	}
+
+	offset_start = (size_t)(dst_start - buffer->data);
+	offset_end = (size_t)(dst_end - buffer->data);
+	src_size = strlen(insertion);
+	dst_size = (size_t)(dst_end - dst_start);
+	required_space = src_size - dst_size;
+
+	if (required_space > 0) {
+		char *new_data;
+
+		if (!(new_data = realloc(buffer->data, buffer->size + required_space))) {
+			return -ENOMEM;
+		}
+
+		if (end) {
+			memmove(new_data + offset_end + required_space,
+				new_data + offset_end,
+				buffer->size - offset_end);
+		}
+
+		buffer->data = new_data;
+		buffer->size += required_space;
+	}
+
+	memcpy(buffer->data + offset_start, insertion, src_size);
+	return 0;
+}
