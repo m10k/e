@@ -174,6 +174,78 @@ static int _selection_end_change(struct widget *widget,
 	return 0;
 }
 
+static int _oinsert_requested(struct widget *widget,
+				void *user_data,
+				void *data)
+{
+	struct cmdbox *box;
+	struct editor *editor;
+	const char *insertion;
+	int err;
+
+	box = (struct cmdbox*)widget;
+	editor = (struct editor*)user_data;
+
+	if (!editor->sel_start) {
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+		return 0;
+	}
+
+	if (cmdbox_get_length(box) == 0) {
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+		return 0;
+	}
+
+	insertion = cmdbox_get_text(box);
+	if ((err = buffer_overwrite(editor->buffer, insertion, editor->sel_start, editor->sel_end)) < 0) {
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+		return 0;
+	}
+
+	cmdbox_clear(box);
+	widget_redraw((struct widget*)editor->window);
+
+	return 0;
+}
+
+static int _insert_requested(struct widget *widget,
+			     void *user_data,
+			     void *data)
+{
+	struct cmdbox *box;
+	struct editor *editor;
+	const char *insertion;
+	int err;
+
+	box = (struct cmdbox*)widget;
+	editor = (struct editor*)user_data;
+
+	if (!editor->sel_start) {
+		fprintf(stderr, "Don't know where to insert text\n");
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+		return 0;
+	}
+
+	if (cmdbox_get_length(box) == 0) {
+		fprintf(stderr, "Nothing to insert\n");
+		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+		return 0;
+	}
+
+	insertion = cmdbox_get_text(box);
+	if ((err = buffer_insert(editor->buffer, insertion, editor->sel_start)) < 0) {
+		fprintf(stderr, "Could not insert text: %s [%d]\n", strerror(-err), -err);
+		return 0;
+	}
+
+	/* TODO: Advance selection so the user can insert more text */
+
+	cmdbox_clear(box);
+	widget_redraw((struct widget*)editor->window);
+
+	return 0;
+}
+
 static int _write_requested(struct widget *widget,
 			    void *user_data,
 			    void *data)
@@ -401,6 +473,16 @@ static int _editor_init_ui(struct editor *editor)
 	} else if ((err = widget_add_handler((struct widget*)editor->cmdbox,
 					     "write_requested",
 					     _write_requested,
+					     editor)) < 0) {
+		return err;
+	} else if ((err = widget_add_handler((struct widget*)editor->cmdbox,
+					     "insert_requested",
+					     _insert_requested,
+					     editor)) < 0) {
+		return err;
+	} else if ((err = widget_add_handler((struct widget*)editor->cmdbox,
+					     "oinsert_requested",
+					     _oinsert_requested,
 					     editor)) < 0) {
 		return err;
 	}
