@@ -840,3 +840,63 @@ int buffer_overwrite(struct buffer *buffer, const char *insertion, struct telex 
 	memcpy(buffer->data + offset_start, insertion, src_size);
 	return 0;
 }
+
+int buffer_erase(struct buffer *buffer, struct telex *start, struct telex *end)
+{
+	const char *erase_start;
+	const char *erase_end;
+	char *new_data;
+	size_t new_size;
+	size_t erase_size;
+	size_t offset_start;
+	size_t offset_end;
+	size_t trailer_size;
+
+	if (!buffer || !start) {
+		return -EINVAL;
+	}
+
+	if (_buffer_lookup_telex(buffer, start, &erase_start) < 0) {
+		return -ERANGE;
+	}
+
+	if (!end) {
+		erase_end = buffer->data + buffer->size;
+	} else if (_buffer_lookup_telex(buffer, end, &erase_end) < 0) {
+		return -ERANGE;
+	}
+
+	if (erase_end < erase_start) {
+		const char *swap;
+
+		swap = erase_end;
+		erase_end = erase_start;
+		erase_start = swap;
+	}
+
+	offset_start = (size_t)(erase_start - buffer->data);
+	offset_end = (size_t)(erase_end - buffer->data);
+	erase_size = offset_end - offset_start;
+	trailer_size = buffer->size - offset_end;
+
+	memmove(buffer->data + offset_start,
+		buffer->data + offset_end,
+		trailer_size);
+	memset(buffer->data + offset_start + trailer_size,
+	       0,
+	       buffer->size - offset_start - trailer_size);
+
+	new_size = buffer->size - erase_size;
+	new_data = realloc(buffer->data, new_size);
+
+	/*
+	 * If reallocation fails, we're left with the bigger buffer, but there
+	 * are no negative consequences, so no need to treat it as an error.
+	 */
+	if (new_data) {
+		buffer->data = new_data;
+		buffer->size = new_size;
+	}
+
+	return 0;
+}

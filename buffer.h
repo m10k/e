@@ -28,6 +28,7 @@ int buffer_get_substring(struct buffer *buffer, struct telex *src_start, struct 
 
 int buffer_insert(struct buffer *buffer, const char *insertion, struct telex *start);
 int buffer_overwrite(struct buffer *buffer, const char *insertion, struct telex *start, struct telex *end);
+int buffer_erase(struct buffer *buffer, struct telex *start, struct telex *end);
 
 int          line_new(struct line **line, int no, const char *str);
 int          line_free(struct line**);
