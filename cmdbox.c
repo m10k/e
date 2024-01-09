@@ -16,7 +16,10 @@ struct cmdbox {
 	struct widget _parent;
 	struct string *buffer;
 
-	int cursor;
+	struct {
+		int x;
+		int y;
+	} cursor;
 	int max_length;
 
 	int highlight_start;
@@ -45,10 +48,10 @@ static int _box_insert_at_cursor(struct cmdbox *box, const char chr)
 		return(-EINVAL);
 	} else if(string_get_length(box->buffer) == box->max_length) {
 		return(-EOVERFLOW);
-	} else if(string_insert_char(box->buffer, box->cursor, chr) < 0) {
+	} else if(string_insert_char(box->buffer, box->cursor.x, chr) < 0) {
 		return(-ENOMEM);
 	} else {
-		box->cursor++;
+		box->cursor.x++;
 	}
 
 	return(0);
@@ -60,8 +63,8 @@ static int _box_remove_cursor_left(struct cmdbox *box)
 		return(-EINVAL);
 	}
 
-	if(box->cursor > 0) {
-		string_remove_char(box->buffer, --box->cursor);
+	if(box->cursor.x > 0) {
+		string_remove_char(box->buffer, --box->cursor.x);
 	}
 
 	return(0);
@@ -73,8 +76,8 @@ static int _box_remove_cursor_right(struct cmdbox *box)
 		return(-EINVAL);
 	}
 
-	if(box->cursor < string_get_length(box->buffer)) {
-		string_remove_char(box->buffer, box->cursor);
+	if(box->cursor.x < string_get_length(box->buffer)) {
+		string_remove_char(box->buffer, box->cursor.x);
 	}
 
 	return(0);
@@ -87,7 +90,7 @@ static int _box_clear_input(struct cmdbox *box)
 	}
 
 	string_truncate(box->buffer, 0);
-	box->cursor = 0;
+	box->cursor.x = 0;
 
 	return(0);
 }
@@ -96,13 +99,13 @@ static int _box_move_cursor(struct cmdbox *box, const int rel)
 {
 	int new_pos;
 
-	new_pos = box->cursor + rel;
+	new_pos = box->cursor.x + rel;
 
 	if(new_pos < 0 || new_pos > string_get_length(box->buffer)) {
 		return(-EOVERFLOW);
 	}
 
-	box->cursor = new_pos;
+	box->cursor.x = new_pos;
 	return(0);
 }
 
@@ -123,7 +126,7 @@ static int _box_set_cursor(struct cmdbox *box, const int pos)
 		new_pos = pos;
 	}
 
-	box->cursor = new_pos;
+	box->cursor.x = new_pos;
 	return(0);
 }
 
@@ -424,11 +427,11 @@ static int _key_handler_triple(struct cmdbox *box, const int key)
 		break;
 
 	case 72: /* home */
-		box->cursor = 0;
+		box->cursor.x = 0;
 		break;
 
 	case 70: /* end */
-		box->cursor = string_get_length(box->buffer);
+		box->cursor.x = string_get_length(box->buffer);
 		break;
 
 	case 53: /* PgUp */
@@ -538,7 +541,7 @@ static int _cmdbox_redraw(struct widget *widget)
 				 box->highlight_len, 1);
 	}
 
-	move(widget->y, widget->x + box->cursor);
+	move(widget->y + box->cursor.y, widget->x + box->cursor.x);
 
 	return(0);
 }
