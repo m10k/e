@@ -491,10 +491,33 @@ static int _cmdbox_resize(struct widget *widget)
 	return(0);
 }
 
+static int _cmdbox_blank(struct widget *widget)
+{
+	int y;
+
+	if (!widget) {
+		return -EINVAL;
+	}
+
+	for (y = 0; y < widget->height; y++) {
+		int x;
+
+		for (x = 0; x < widget->width; x++) {
+			mvwaddch(widget->window,
+				 widget->y + y, widget->x + x,
+				 ' ');
+		}
+
+		mvchgat(widget->y + y, widget->x, widget->width,
+			0, UI_COLOR_COMMAND, NULL);
+	}
+
+	return 0;
+}
+
 static int _cmdbox_redraw(struct widget *widget)
 {
 	struct cmdbox *box;
-	int x;
 
 	if(!widget) {
 		return(-EINVAL);
@@ -502,10 +525,7 @@ static int _cmdbox_redraw(struct widget *widget)
 
 	box = (struct cmdbox*)widget;
 
-	for(x = 0; x <= widget->width; x++) {
-		mvwaddch(widget->window, widget->y,
-			 widget->x + x, ' ');
-	}
+	_cmdbox_blank(widget);
 
 	mvwprintw(widget->window, widget->y, widget->x,
 		  "%s", string_get_data(box->buffer));
