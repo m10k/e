@@ -538,7 +538,7 @@ static int _cmdbox_redraw(struct widget *widget)
 				 box->highlight_len, 1);
 	}
 
-	move(box->_parent.y, box->cursor);
+	move(widget->y, widget->x + box->cursor);
 
 	return(0);
 }
