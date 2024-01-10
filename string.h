@@ -6,6 +6,9 @@ struct string;
 int string_new(struct string**);
 int string_free(struct string**);
 
+struct string* string_strdup(const char *s);
+struct string* string_strndup(const char *s, size_t n);
+
 int string_insert_char(struct string *str, const int pos,
 		       const char chr);
 int string_remove_char(struct string *str, const int pos);

@@ -54,6 +54,44 @@ int string_free(struct string **str)
 	return(0);
 }
 
+struct string* string_strdup(const char *s)
+{
+	struct string *str;
+
+	if (!(str = calloc(1, sizeof(*str)))) {
+		return NULL;
+	}
+
+	if (!(str->data = strdup(s))) {
+		free(str);
+		str = NULL;
+	} else {
+		str->size = strlen(str->data);
+		str->len = str->size;
+	}
+
+	return str;
+}
+
+struct string* string_strndup(const char *s, size_t n)
+{
+	struct string *str;
+
+	if (!(str = calloc(1, sizeof(*str)))) {
+		return NULL;
+	}
+
+	if (!(str->data = strndup(s, n))) {
+		free(str);
+		str = NULL;
+	} else {
+		str->size = strlen(str->data);
+		str->len = str->size;
+	}
+
+	return str;
+}
+
 static int _string_grow(struct string *str, const size_t n)
 {
 	char *new_data;
