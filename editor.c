@@ -488,6 +488,11 @@ int editor_get_var(struct editor *editor, const char *name, const char **value)
 	return 0;
 }
 
+static int _cmdbox_quit_requested(struct widget *widget, void *user_data, void *data)
+{
+	return editor_quit((struct editor*)user_data);
+}
+
 static int _editor_init_ui(struct editor *editor)
 {
 	int err;
@@ -511,6 +516,11 @@ static int _editor_init_ui(struct editor *editor)
 	} else if((err = container_add((struct container*)editor->vbox,
 				       (struct widget*)editor->cmdbox)) < 0) {
 		return(err);
+	} else if((err = widget_add_handler((struct widget*)editor->cmdbox,
+					    "quit_requested",
+					    _cmdbox_quit_requested,
+					    editor)) < 0) {
+		return err;
 	} else if((err = widget_add_handler((struct widget*)editor->cmdbox,
 					    "size_changed",
 					    _cmdbox_size_changed,
