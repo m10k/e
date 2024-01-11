@@ -1,4 +1,4 @@
-OBJECTS = main.o config.o file.o buffer.o string.o \
+OBJECTS = main.o config.o file.o buffer.o string.o kbdwidget.o \
 	  window.o cmdbox.o editor.o vbox.o textview.o widget.o \
 	  container.o
 OUTPUT = e
