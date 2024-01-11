@@ -3,17 +3,10 @@
 #include <errno.h>
 #include "ui.h"
 #include "string.h"
-
-typedef int (_key_handler)(struct cmdbox*, const int);
-
-static int _key_handler_single(struct cmdbox*, const int);
-static int _key_handler_double(struct cmdbox*, const int);
-static int _key_handler_triple(struct cmdbox*, const int);
-
-static _key_handler *_handler = _key_handler_single;
+#include "kbdwidget.h"
 
 struct cmdbox {
-	struct widget _parent;
+	struct kbd_widget _parent;
 	struct string *buffer;
 
 	struct {
@@ -26,21 +19,6 @@ struct cmdbox {
 	int highlight_len;
 	ui_color_t highlight_color;
 };
-
-#if 0
-static int _box_insert_at_pos(struct cmdbox *box, int pos, const char chr)
-{
-	if(!box) {
-		return(-EINVAL);
-	} else if(string_get_length(box->buffer) == box->max_length) {
-		return(-EOVERFLOW);
-	} else if(string_insert_char(box->buffer, pos, chr) < 0) {
-		return(-ENOMEM);
-	}
-
-	return(0);
-}
-#endif /* 0 */
 
 static int _box_insert_at_cursor(struct cmdbox *box, const char chr)
 {
@@ -130,354 +108,6 @@ static int _box_set_cursor(struct cmdbox *box, const int pos)
 	return(0);
 }
 
-static int _key_handler_single(struct cmdbox *box, const int key)
-{
-	_key_handler *next_handler;
-	int err;
-
-	next_handler = _key_handler_single;
-	err = 0;
-
-#ifdef DEBUG_INPUT
-	fprintf(stderr, "S[%d]\n", key);
-#endif /* DEBUG_INPUT */
-
-	switch(key) {
-#if 0
-	case 0: /* ^2, ^@ */
-	case 17: /* ^Q */
-	case 23: /* ^W */
-	case 5   /* ^E */
-	case 18: /* ^R */
-	case 20: /* ^T */
-	case 25: /* ^Y */
-	case 21: /* ^U */
-	case 9:  /* ^I */
-	case 15: /* ^O */
-	case 16: /* ^P */
-	case 27: /* ESC, ^[ */
-		break;
-
-	case 1:  /* ^A */
-	case 19: /* ^S */
-	case 4:  /* ^D */
-	case 6:  /* ^F */
-	case 7:  /* ^G */
-	case 8:  /* ^H */
-	case 10: /* ^J */
-	case 11: /* ^K */
-	case 12: /* ^L */
-	case 59: /* ; */
-	case 58: /* : */
-	case 29: /* ^] */
-		break;
-
-	case 26:  /* ^Z */
-	case 24:  /* ^X */
-	case 3:   /* ^C */
-	case 22:  /* ^V */
-	case 2:   /* ^B */
-	case 14:  /* ^N */
-	case 13:  /* ^M (usually mapped to 10: ^J) */
-	case 44:  /* , */
-	case 46:  /* . */
-	case 31:  /* ^_ */
-	case 28:  /* ^\ */
-	case 127: /* ^? */
-	case 30:  /* ^^ */
-
-#endif
-	case 2:   /* ^B */
-		_box_move_cursor(box, -1);
-		break;
-
-	case 6:   /* ^F */
-		_box_move_cursor(box, +1);
-		break;
-
-	case 5:   /* ^E */
-		_box_set_cursor(box, -1);
-		break;
-
-	case 1:   /* ^A */
-		_box_set_cursor(box, 0);
-		break;
-
-	case 19:  /* ^S */
-		widget_emit_signal((struct widget*)box,
-				   "save_requested",
-				   box->buffer);
-		break;
-
-	case 18:  /* ^R */
-		widget_emit_signal((struct widget*)box,
-				   "erase_requested",
-				   box->buffer);
-		break;
-
-	case 4:   /* ^D */
-		_box_remove_cursor_right(box);
-		break;
-
-	case 26:  /* ^Z */
-		widget_emit_signal((struct widget*)box,
-				   "selection_start_changed",
-				   box->buffer);
-		break;
-
-	case 24:  /* ^X */
-		widget_emit_signal((struct widget*)box,
-				   "selection_end_changed",
-				   box->buffer);
-		break;
-
-	case 3:   /* ^C */
-		widget_emit_signal((struct widget*)box,
-				   "read_requested",
-				   box->buffer);
-		break;
-
-	case 22:  /* ^V */
-		widget_emit_signal((struct widget*)box,
-				   "write_requested",
-				   box->buffer);
-		break;
-
-	case 8:   /* ^H */
-	case 127: /* backspace */
-		_box_remove_cursor_left(box);
-		break;
-
-	case 10:
-		/* enter */
-		widget_emit_signal((struct widget*)box,
-				   "insert_requested",
-				   box->buffer);
-		break;
-
-	case 14:  /* ^N */
-		widget_emit_signal((struct widget*)box,
-				   "oinsert_requested",
-				   box->buffer);
-		break;
-
-	case 27:
-		next_handler = _key_handler_double;
-		break;
-
-	default:
-		_box_insert_at_cursor(box, (char)key);
-		break;
-	}
-
-	_handler = next_handler;
-	return(err);
-}
-
-static int _key_handler_fn(struct cmdbox *box, const int key)
-{
-	int err;
-
-	err = 0;
-
-	switch(key) {
-	case 80: /* F1 */
-		break;
-
-	case 81: /* F2 */
-		break;
-
-	case 82: /* F3 */
-		break;
-
-	case 83: /* F4 */
-		break;
-
-	case 84: /* F5 */
-		break;
-
-	default:
-		err = -EINVAL;
-		break;
-	}
-
-	_handler = _key_handler_single;
-	return(err);
-}
-
-static int _key_handler_double(struct cmdbox *box, const int key)
-{
-	_key_handler *next_handler;
-	int err;
-
-	next_handler = _key_handler_single;
-	err = 0;
-
-#ifdef DEBUG_INPUT
-	fprintf(stderr, "D[%d]\n", key);
-#endif /* DEBUG_INPUT */
-
-	switch(key) {
-	case 27:
-		next_handler = _key_handler_single;
-		err = -EIO;
-		break;
-
-	case 79:
-		next_handler = _key_handler_fn;
-		break;
-
-	case 91:
-		next_handler = _key_handler_triple;
-		break;
-
-	default:
-		break;
-	}
-
-	_handler = next_handler;
-	return(err);
-}
-
-static int _key_handler_pgup(struct cmdbox *box, const int key)
-{
-	int err;
-
-	if(key == 126) {
-		err = 0;
-	} else {
-		err = -EINVAL;
-	}
-
-	_handler = _key_handler_single;
-	return(err);
-}
-
-static int _key_handler_pgdn(struct cmdbox *box, const int key)
-{
-	int err;
-
-	if(key == 126) {
-		err = 0;
-	} else {
-		err = -EINVAL;
-	}
-
-	_handler = _key_handler_single;
-	return(err);
-}
-
-static int _key_handler_ins(struct cmdbox *box, const int key)
-{
-	int err;
-
-        if(key == 126) {
-		err = 0;
-	} else {
-		err = -EINVAL;
-	}
-
-	_handler = _key_handler_single;
-	return(err);
-}
-
-static int _key_handler_del(struct cmdbox *box, const int key)
-{
-	int err;
-
-	err = 0;
-
-	if(key == 126) {
-		_box_remove_cursor_right(box);
-	} else {
-		err = -EINVAL;
-	}
-
-	_handler = _key_handler_single;
-	return(err);
-}
-
-static int _key_handler_triple(struct cmdbox *box, const int key)
-{
-	_key_handler *next_handler;
-	int err;
-
-	next_handler = _key_handler_single;
-	err = 0;
-
-#if DEBUG_INPUT
-	fprintf(stderr, "T[%d]\n", key);
-#endif /* DEBUG_INPUT */
-
-	switch(key) {
-	case 68:
-		/* left */
-		_box_move_cursor(box, -1);
-		break;
-
-	case 67:
-		/* right */
-		_box_move_cursor(box, +1);
-		break;
-
-	case 65: /* up */
-		break;
-
-	case 66: /* dn */
-		break;
-
-	case 72: /* home */
-		box->cursor.x = 0;
-		break;
-
-	case 70: /* end */
-		box->cursor.x = string_get_length(box->buffer);
-		break;
-
-	case 53: /* PgUp */
-		next_handler = _key_handler_pgup;
-		break;
-
-	case 54: /* PgDn */
-		next_handler = _key_handler_pgdn;
-		break;
-
-	case 50: /* Ins */
-		next_handler = _key_handler_ins;
-		break;
-
-	case 51: /* Del */
-		next_handler = _key_handler_del;
-		break;
-
-	default:
-		break;
-	}
-
-	_handler = next_handler;
-	return(err);
-}
-
-static int _cmdbox_input(struct widget *widget, const int ev)
-{
-	struct cmdbox *box;
-	int err;
-
-	if(!widget) {
-		return(-EINVAL);
-	}
-
-	box = (struct cmdbox*)widget;
-
-	err = _handler(box, ev);
-
-	if(err < 0) {
-		return(err);
-	}
-
-	return(widget_redraw(widget));
-}
-
 static int _cmdbox_resize(struct widget *widget)
 {
 	struct cmdbox *box;
@@ -563,6 +193,131 @@ static int _cmdbox_free(struct widget *widget)
 	return(0);
 }
 
+static int _cmdbox_key_pressed(struct widget *widget, void *user_data, void *event)
+{
+	struct cmdbox *box;
+	struct key_event *key_event;
+	int err;
+
+	box = (struct cmdbox*)widget;
+	key_event = (struct key_event*)event;
+
+	fprintf(stderr, "%s: %d + %d\n", __func__, key_event->keycode, key_event->modifier);
+
+	if (!key_event->modifier) {
+		switch (key_event->keycode) {
+		case KEYCODE_DELETE:
+			_box_remove_cursor_right(box);
+			break;
+
+		case KEYCODE_BACKSPACE:
+			_box_remove_cursor_left(box);
+			break;
+
+		case KEYCODE_LEFT:
+			_box_move_cursor(box, -1);
+			break;
+
+		case KEYCODE_RIGHT:
+			_box_move_cursor(box, +1);
+			break;
+
+		case KEYCODE_DOWN:
+		case KEYCODE_END:
+			_box_set_cursor(box, -1);
+			break;
+
+		case KEYCODE_UP:
+		case KEYCODE_HOME:
+			_box_set_cursor(box, 0);
+			break;
+
+		case KEYCODE_F1:
+		case KEYCODE_F2:
+		case KEYCODE_F3:
+		case KEYCODE_F4:
+		case KEYCODE_F5:
+		case KEYCODE_F6:
+		case KEYCODE_F7:
+		case KEYCODE_F8:
+		case KEYCODE_F9:
+		case KEYCODE_F10:
+		case KEYCODE_F11:
+		case KEYCODE_F12:
+			break;
+
+		default:
+			if ((err = _box_insert_at_cursor(box, key_event->keycode)) < 0) {
+				fprintf(stderr, "_box_insert_at_cursor: %s\n", strerror(-err));
+			}
+		}
+	} else if (key_event->modifier & KEYMOD_CTRL) {
+		switch (key_event->keycode) {
+		case 'Q':
+			widget_emit_signal(widget, "quit_requested", NULL);
+			break;
+
+		case 'A':
+			_box_set_cursor(box, 0);
+			break;
+
+		case 'E':
+			_box_set_cursor(box, -1);
+			break;
+
+		case 'B':
+			_box_move_cursor(box, -1);
+			break;
+
+		case 'F':
+			_box_move_cursor(box, +1);
+			break;
+
+		case 'S':
+			widget_emit_signal(widget, "save_requested", box->buffer);
+			break;
+
+		case 'R':
+			widget_emit_signal(widget, "erase_requested", box->buffer);
+			break;
+
+		case 'D':
+			_box_remove_cursor_right(box);
+			break;
+
+		case 'Z':
+			widget_emit_signal(widget, "selection_start_changed", box->buffer);
+			break;
+
+		case 'X':
+			widget_emit_signal(widget, "selection_end_changed", box->buffer);
+			break;
+
+		case 'C':
+			widget_emit_signal(widget, "read_requested", box->buffer);
+			break;
+
+		case 'V':
+			widget_emit_signal(widget, "write_requested", box->buffer);
+			break;
+
+		case 'H':
+			_box_remove_cursor_left(box);
+			break;
+
+		case 'J':
+			widget_emit_signal(widget, "insert_requested", box->buffer);
+			break;
+
+		case 'N':
+			widget_emit_signal(widget, "oinsert_requested", box->buffer);
+			break;
+		}
+	}
+
+	return widget_redraw(widget);
+}
+
 int cmdbox_new(struct cmdbox **cmdbox)
 {
 	struct cmdbox *box;
@@ -579,7 +334,7 @@ int cmdbox_new(struct cmdbox **cmdbox)
 
 	memset(box, 0, sizeof(*box));
 
-	widget_init((struct widget*)box);
+	kbd_widget_init((struct kbd_widget*)box);
 
 	/* don't vertically expand cmdboxes */
 	((struct widget*)box)->attrs &= ~UI_ATTR_VEXPAND;
@@ -589,10 +344,11 @@ int cmdbox_new(struct cmdbox **cmdbox)
 		return(-ENOMEM);
 	}
 
-	((struct widget*)box)->input = _cmdbox_input;
 	((struct widget*)box)->resize = _cmdbox_resize;
 	((struct widget*)box)->redraw = _cmdbox_redraw;
 	((struct widget*)box)->free = _cmdbox_free;
+
+	widget_add_handler((struct widget*)box, "key_pressed", _cmdbox_key_pressed, NULL);
 
 	widget_add_signal((struct widget*)box, "selection_start_changed");
 	widget_add_signal((struct widget*)box, "selection_end_changed");
@@ -602,6 +358,7 @@ int cmdbox_new(struct cmdbox **cmdbox)
 	widget_add_signal((struct widget*)box, "oinsert_requested");
 	widget_add_signal((struct widget*)box, "save_requested");
 	widget_add_signal((struct widget*)box, "erase_requested");
+	widget_add_signal((struct widget*)box, "quit_requested");
 
 	*cmdbox = box;
 
