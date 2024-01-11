@@ -28,6 +28,7 @@ struct editor {
 	struct variable *variables;
 
 	int readonly;
+	int running;
 };
 
 struct variable* _editor_find_variable(struct editor *editor, const char *name);
@@ -598,7 +599,9 @@ int editor_run(struct editor *editor)
 {
 	int event;
 
-	while(1) {
+	editor->running = TRUE;
+
+	while (editor->running) {
 		event = getch();
 
 		if(event == KEY_RESIZE) {
@@ -608,7 +611,17 @@ int editor_run(struct editor *editor)
 		}
 	}
 
-	return(0);
+	return 0;
+}
+
+int editor_quit(struct editor *editor)
+{
+	if (!editor) {
+		return -EINVAL;
+	}
+
+	editor->running = FALSE;
+	return 0;
 }
 
 int editor_new(struct editor **editor)
