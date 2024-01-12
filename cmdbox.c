@@ -16,7 +16,6 @@ struct cmdbox {
 
 	struct pos cursor;
 	struct pos viewport;
-	int max_length;
 
 	int highlight_start;
 	int highlight_len;
@@ -27,8 +26,6 @@ static int _box_insert_at_cursor(struct cmdbox *box, const char chr)
 {
 	if(!box) {
 		return(-EINVAL);
-	} else if(string_get_length(box->buffer) == box->max_length) {
-		return(-EOVERFLOW);
 	} else if(string_insert_char(box->buffer, box->cursor.x, chr) < 0) {
 		return(-ENOMEM);
 	} else {
@@ -113,18 +110,12 @@ static int _box_set_cursor(struct cmdbox *box, const int pos)
 
 static int _cmdbox_resize(struct widget *widget)
 {
-	struct cmdbox *box;
-
 	if(!widget) {
 		return(-EINVAL);
 	}
 
-	box = (struct cmdbox*)widget;
-
 	widget->height = 1;
-	box->max_length = widget->width;
-
-	return(0);
+	return 0;
 }
 
 static int _cmdbox_blank(struct widget *widget)
