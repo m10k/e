@@ -5,14 +5,17 @@
 #include "string.h"
 #include "kbdwidget.h"
 
+struct pos {
+	int x;
+	int y;
+};
+
 struct cmdbox {
 	struct kbd_widget _parent;
 	struct string *buffer;
 
-	struct {
-		int x;
-		int y;
-	} cursor;
+	struct pos cursor;
+	struct pos viewport;
 	int max_length;
 
 	int highlight_start;
@@ -151,6 +154,7 @@ static int _cmdbox_blank(struct widget *widget)
 static int _cmdbox_redraw(struct widget *widget)
 {
 	struct cmdbox *box;
+	int dist;
 
 	if(!widget) {
 		return(-EINVAL);
@@ -160,18 +164,46 @@ static int _cmdbox_redraw(struct widget *widget)
 
 	_cmdbox_blank(widget);
 
+	/* Slide the viewport if the cursor is out of view */
+	if ((dist = box->cursor.x - box->viewport.x) < 0 ||
+	    (dist = box->cursor.x - box->viewport.x - widget->width + 1) > 0) {
+		box->viewport.x += dist;
+	}
+	if ((dist = box->cursor.y - box->viewport.y) < 0 ||
+	    (dist = box->cursor.y - box->viewport.y - widget->height) > 0) {
+		box->viewport.y += dist;
+	}
+	fprintf(stderr, "Viewport @ (%d,%d)\n", box->viewport.x, box->viewport.y);
 	mvwprintw(widget->window, widget->y, widget->x,
-		  "%s", string_get_data(box->buffer));
+		  "%s", string_get_data(box->buffer) + box->viewport.x);
 
 	if(box->highlight_len > 0) {
+		int highlight_x;
+		int highlight_w;
+
+		highlight_x = box->highlight_start - box->viewport.x;
+		highlight_w = box->highlight_len - box->viewport.x;
+
+		if (highlight_x < 0) {
+			highlight_x = 0;
+		}
+		if (highlight_w < 0) {
+			highlight_w = 0;
+		}
+		if (highlight_w > widget->width) {
+			highlight_w = widget->width;
+		}
+
 		widget_set_color(widget, UI_COLOR_COMMAND,
 				 0, 0, -1, -1);
-		widget_set_color(widget, box->highlight_color,
-				 box->highlight_start, 0,
-				 box->highlight_len, 1);
+		if (highlight_x < widget->width) {
+			widget_set_color(widget, box->highlight_color,
+					 highlight_x, 0,
+					 highlight_w, 1);
+		}
 	}
 
-	move(widget->y + box->cursor.y, widget->x + box->cursor.x);
+	move(widget->y + box->cursor.y - box->viewport.y, widget->x + box->cursor.x - box->viewport.y);
 
 	return(0);
 }
