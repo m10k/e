@@ -104,6 +104,7 @@ static int _selection_start_change(struct widget *widget,
 	if (cmdbox_get_length(box) == 0) {
 		_cmdbox_set_text_from_telex(box, editor->sel_start);
 		textview_set_selection_start(editor->edit, NULL);
+		telex_free(&editor->sel_start);
 		return 0;
 	}
 
@@ -161,6 +162,7 @@ static int _selection_end_change(struct widget *widget,
 	if (cmdbox_get_length(box) == 0) {
 		_cmdbox_set_text_from_telex(box, editor->sel_end);
 		textview_set_selection_end(editor->edit, NULL);
+		telex_free(&editor->sel_end);
 		return 0;
 	}
 
