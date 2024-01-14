@@ -1,0 +1,13 @@
+Source: ee
+Priority: optional
+Maintainer: Matthias Kruk <m@m10k.eu>
+Build-Depends: debhelper (>= 9), make, coreutils, gcc, libncurses5-dev, libtelex-dev
+Standards-Version: 3.9.8
+Section: editors
+Homepage: https://github.com/m10k/e
+
+Package: ee
+Section: editors
+Architecture: any
+Depends: libc6, libncurses5, libtelex, ${shlibs:Depends}
+Description: A highly experimental text editor
