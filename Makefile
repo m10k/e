@@ -1,6 +1,6 @@
-OBJECTS = main.o config.o file.o buffer.o string.o kbdwidget.o \
-	  window.o cmdbox.o editor.o vbox.o textview.o widget.o \
-	  container.o
+OBJECTS = src/main.o src/config.o src/file.o src/buffer.o src/string.o src/kbdwidget.o \
+	  src/window.o src/cmdbox.o src/editor.o src/vbox.o src/textview.o src/widget.o \
+	  src/container.o
 OUTPUT = e
 PHONY = clean
 
