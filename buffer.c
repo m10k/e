@@ -757,7 +757,7 @@ int buffer_get_substring(struct buffer *buffer, struct telex *src_start, struct 
 	return 0;
 }
 
-int buffer_insert(struct buffer *buffer, const char *insertion, struct telex *start)
+int buffer_insert(struct buffer *buffer, const char *insertion, struct telex *start, const char **new_end)
 {
 	const char *insertion_pos;
 	size_t insertion_len;
@@ -789,10 +789,15 @@ int buffer_insert(struct buffer *buffer, const char *insertion, struct telex *st
 	buffer->data = new_data;
 	buffer->size = new_size;
 
+	if (new_end) {
+		*new_end = new_data + insertion_offset + insertion_len;
+	}
+
 	return 0;
 }
 
-int buffer_overwrite(struct buffer *buffer, const char *insertion, struct telex *start, struct telex *end)
+int buffer_overwrite(struct buffer *buffer, const char *insertion, struct telex *start, struct telex *end,
+	const char **new_end)
 {
 	const char *dst_start;
 	const char *dst_end;
@@ -838,6 +843,11 @@ int buffer_overwrite(struct buffer *buffer, const char *insertion, struct telex 
 	}
 
 	memcpy(buffer->data + offset_start, insertion, src_size);
+
+	if (new_end) {
+		*new_end = buffer->data + offset_start + src_size;
+	}
+
 	return 0;
 }
 
