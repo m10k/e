@@ -193,6 +193,27 @@ static int _selection_end_change(struct widget *widget,
 	return 0;
 }
 
+static int _advance_selection(struct editor *editor, const char *new_pos)
+{
+	struct telex *new_sel_start;
+	int err;
+
+	if ((err = telex_rlookup(&new_sel_start, buffer_get_data(editor->buffer), new_pos)) == 0) {
+		if (editor->sel_start) {
+			textview_set_selection_start(editor->edit, new_sel_start);
+			telex_free(&editor->sel_start);
+			editor->sel_start = new_sel_start;
+		}
+
+		if (editor->sel_end) {
+			textview_set_selection_end(editor->edit, NULL);
+			telex_free(&editor->sel_end);
+		}
+	}
+
+	return err;
+}
+
 static int _oinsert_requested(struct widget *widget,
 				void *user_data,
 				void *data)
@@ -200,6 +221,7 @@ static int _oinsert_requested(struct widget *widget,
 	struct cmdbox *box;
 	struct editor *editor;
 	const char *insertion;
+	const char *new_pos;
 	int err;
 
 	box = (struct cmdbox*)widget;
@@ -216,10 +238,13 @@ static int _oinsert_requested(struct widget *widget,
 	}
 
 	insertion = cmdbox_get_text(box);
-	if ((err = buffer_overwrite(editor->buffer, insertion, editor->sel_start, editor->sel_end)) < 0) {
+	if ((err = buffer_overwrite(editor->buffer, insertion, editor->sel_start,
+				    editor->sel_end, &new_pos)) < 0) {
 		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
 		return 0;
 	}
+
+	_advance_selection(editor, new_pos);
 
 	cmdbox_clear(box);
 	widget_redraw((struct widget*)editor->window);
@@ -234,6 +259,7 @@ static int _insert_requested(struct widget *widget,
 	struct cmdbox *box;
 	struct editor *editor;
 	const char *insertion;
+	const char *new_pos;
 	int err;
 
 	box = (struct cmdbox*)widget;
@@ -252,12 +278,13 @@ static int _insert_requested(struct widget *widget,
 	}
 
 	insertion = cmdbox_get_text(box);
-	if ((err = buffer_insert(editor->buffer, insertion, editor->sel_start)) < 0) {
+	if ((err = buffer_insert(editor->buffer, insertion, editor->sel_start, &new_pos)) < 0) {
 		fprintf(stderr, "Could not insert text: %s [%d]\n", strerror(-err), -err);
 		return 0;
 	}
 
-	/* TODO: Advance selection so the user can insert more text */
+	/* Advance selection so the user can insert more text */
+	_advance_selection(editor, new_pos);
 
 	cmdbox_clear(box);
 	widget_redraw((struct widget*)editor->window);
@@ -273,6 +300,7 @@ static int _write_requested(struct widget *widget,
 	struct editor *editor;
 	const char *var_name;
 	const char *var_value;
+	const char *new_pos;
 	int err;
 
 	box = (struct cmdbox*)widget;
@@ -298,12 +326,14 @@ static int _write_requested(struct widget *widget,
 	}
 
 	fprintf(stderr, "Inserting variable \"%s\" into buffer\n", var_name);
-	if ((err = buffer_insert(editor->buffer, var_value, editor->sel_start)) < 0) {
+	if ((err = buffer_insert(editor->buffer, var_value, editor->sel_start, &new_pos)) < 0) {
 		fprintf(stderr, "Could not insert variable \"%s\": %s [%d]\n",
 			var_name, strerror(-err), -err);
 		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
 		return 0;
 	}
+
+	_advance_selection(editor, new_pos);
 
 	cmdbox_clear(box);
 	widget_redraw((struct widget*)editor->window);
