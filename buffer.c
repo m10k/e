@@ -779,9 +779,9 @@ int buffer_insert(struct buffer *buffer, const char *insertion, struct telex *st
 		return -ENOMEM;
 	}
 
-	memcpy(new_data + insertion_offset + insertion_len,
-	       new_data + insertion_offset,
-	       suffix_len);
+	memmove(new_data + insertion_offset + insertion_len,
+		new_data + insertion_offset,
+		suffix_len);
 	memcpy(new_data + insertion_offset,
 	       insertion,
 	       insertion_len);
