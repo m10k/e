@@ -2,24 +2,23 @@ OBJECTS = src/main.o src/config.o src/file.o src/buffer.o src/string.o src/kbdwi
 	  src/window.o src/cmdbox.o src/editor.o src/vbox.o src/textview.o src/widget.o \
 	  src/container.o
 OUTPUT = e
-PHONY = clean
+PHONY = clean install
 
 CFLAGS = -Wall -pedantic -fPIC
 LIBS = -lncurses -ltelex
 
+ifeq ($(PREFIX), )
+	PREFIX = /usr
+endif
+
 all: $(OUTPUT)
 
-uitest: ui.o string.o window.o cmdbox.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
+install: all
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	install -o root -g root -m 755 $(OUTPUT) $(DESTDIR)$(PREFIX)/bin/.
 
-textview: config.o string.o telex.o file.o config.o textview.o window.o buffer.o textview_test.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
-
-telex: telex.o file.o string.o config.o telex_test.o
-	$(CC) $(CFLAGS) -o $@ $^
-
-snippet: telex.o file.o string.o config.o buffer.o snippet_test.o
-	$(CC) $(CFLAGS) -o $@ $^
+uninstall:
+	rm -rf $(DESTDIR)$(PREFIX)/bin/$(OUTPUT)
 
 clean:
 	rm -rf $(OBJECTS) $(OUTPUT)
