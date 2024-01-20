@@ -169,6 +169,29 @@ int string_insert_char(struct string *str, const int pos,
 	return(0);
 }
 
+int string_insert_string(struct string *dst, const int pos, struct string *src)
+{
+	const char *chr;
+	int off;
+	int err;
+
+	if (!dst || !src) {
+		return -EINVAL;
+	}
+
+	for (off = pos, chr = src->data; *chr; chr++) {
+		if ((err = string_insert_char(dst, off, *chr)) < 0) {
+			return err;
+		}
+
+		if (pos != -1) {
+			off++;
+		}
+	}
+
+	return 0;
+}
+
 int string_remove_char(struct string *str, const int pos)
 {
 	size_t suffix_len;
