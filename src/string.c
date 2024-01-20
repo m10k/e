@@ -92,6 +92,25 @@ struct string* string_strndup(const char *s, size_t n)
 	return str;
 }
 
+struct string* string_get_substring(struct string *str, int start, int length)
+{
+	if (!str) {
+		errno = EINVAL;
+		return NULL;
+	}
+
+	if (start < 0 || start > str->len) {
+	        errno = ERANGE;
+		return NULL;
+	}
+
+	if (length < 0) {
+		return string_strdup(str->data + start);
+	}
+
+	return string_strndup(str->data + start, (size_t)length);
+}
+
 static int _string_grow(struct string *str, const size_t n)
 {
 	char *new_data;

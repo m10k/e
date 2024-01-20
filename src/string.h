@@ -8,6 +8,7 @@ int string_free(struct string**);
 
 struct string* string_strdup(const char *s);
 struct string* string_strndup(const char *s, size_t n);
+struct string* string_get_substring(struct string *str, int start, int length);
 
 int string_insert_char(struct string *str, const int pos,
 		       const char chr);
