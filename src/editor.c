@@ -63,20 +63,6 @@ static int _cmdbox_set_text_from_telex(struct cmdbox *box, struct telex *telex)
 	return(0);
 }
 
-static int _cmdbox_size_changed(struct widget *widget,
-				void *user_data,
-				void *data)
-{
-	struct editor *editor;
-
-	editor = (struct editor*)user_data;
-
-	widget_resize((struct widget*)editor->window);
-	widget_redraw((struct widget*)editor->window);
-
-	return 0;
-}
-
 static int _selection_start_change(struct widget *widget,
 				void *user_data,
 				void *data)
@@ -551,11 +537,6 @@ static int _editor_init_ui(struct editor *editor)
 	} else if((err = widget_add_handler((struct widget*)editor->cmdbox,
 					    "quit_requested",
 					    _cmdbox_quit_requested,
-					    editor)) < 0) {
-		return err;
-	} else if((err = widget_add_handler((struct widget*)editor->cmdbox,
-					    "size_changed",
-					    _cmdbox_size_changed,
 					    editor)) < 0) {
 		return err;
 	} else if((err = widget_add_handler((struct widget*)editor->cmdbox,
