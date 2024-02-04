@@ -2,7 +2,7 @@
 #include <string.h>
 #include <errno.h>
 #include "ui.h"
-#include "string.h"
+#include "multistring.h"
 #include "kbdwidget.h"
 
 struct pos {
@@ -12,7 +12,7 @@ struct pos {
 
 struct cmdbox {
 	struct kbd_widget _parent;
-	struct string *buffer;
+	struct multistring *buffer;
 
 	struct pos cursor;
 	struct pos viewport;
@@ -24,53 +24,69 @@ struct cmdbox {
 
 static int _box_insert_at_cursor(struct cmdbox *box, const char chr)
 {
-	if(!box) {
-		return(-EINVAL);
-	} else if(string_insert_char(box->buffer, box->cursor.x, chr) < 0) {
-		return(-ENOMEM);
-	} else {
-		box->cursor.x++;
+	int err;
+
+	if (!box) {
+		return -EINVAL;
 	}
 
-	return(0);
+	if ((err = multistring_line_insert_char(box->buffer, box->cursor.y, box->cursor.x, chr)) < 0) {
+		return err;
+	}
+
+	box->cursor.x++;
+	if (chr == '\n') {
+		box->cursor.y++;
+		box->cursor.x = 0;
+	}
+
+	return 0;
 }
 
 static int _box_remove_cursor_left(struct cmdbox *box)
 {
-	if(!box) {
-		return(-EINVAL);
+	if (!box) {
+		return -EINVAL;
 	}
 
-	if(box->cursor.x > 0) {
-		string_remove_char(box->buffer, --box->cursor.x);
+	if (box->cursor.x == 0 && box->cursor.y > 0) {
+		box->cursor.y--;
+		box->cursor.x = multistring_line_get_length(box->buffer, box->cursor.y);
 	}
 
-	return(0);
+	if (box->cursor.x > 0) {
+		multistring_line_remove_char(box->buffer, box->cursor.y, --box->cursor.x);
+	}
+
+	return 0;
 }
 
 static int _box_remove_cursor_right(struct cmdbox *box)
 {
-	if(!box) {
-		return(-EINVAL);
+	if (!box) {
+		return -EINVAL;
 	}
 
-	if(box->cursor.x < string_get_length(box->buffer)) {
-		string_remove_char(box->buffer, box->cursor.x);
+	if (box->cursor.x < multistring_line_get_length(box->buffer, box->cursor.y)) {
+		multistring_line_remove_char(box->buffer, box->cursor.y, box->cursor.x);
 	}
 
-	return(0);
+	return 0;
 }
 
 static int _box_clear_input(struct cmdbox *box)
 {
-	if(!box) {
-		return(-EINVAL);
+	if (!box) {
+		return -EINVAL;
 	}
 
-	string_truncate(box->buffer, 0);
+	multistring_truncate(box->buffer, 0, 0);
 	box->cursor.x = 0;
+	box->cursor.y = 0;
+	box->viewport.x = 0;
+	box->viewport.y = 0;
 
-	return(0);
+	return 0;
 }
 
 static int _box_move_cursor(struct cmdbox *box, const int rel)
@@ -79,12 +95,12 @@ static int _box_move_cursor(struct cmdbox *box, const int rel)
 
 	new_pos = box->cursor.x + rel;
 
-	if(new_pos < 0 || new_pos > string_get_length(box->buffer)) {
-		return(-EOVERFLOW);
+	if (new_pos < 0 || new_pos > multistring_line_get_length(box->buffer, box->cursor.y)) {
+		return -EOVERFLOW;
 	}
 
 	box->cursor.x = new_pos;
-	return(0);
+	return 0;
 }
 
 static int _box_set_cursor(struct cmdbox *box, const int pos)
@@ -92,29 +108,29 @@ static int _box_set_cursor(struct cmdbox *box, const int pos)
 	int new_pos;
 	int limit;
 
-	if(!box) {
-		return(-EINVAL);
+	if (!box) {
+		return -EINVAL;
 	}
 
-	limit = string_get_length(box->buffer);
+	limit = multistring_line_get_length(box->buffer, box->cursor.y);
 
-	if(pos < 0 || pos > limit) {
+	if (pos < 0 || pos > limit) {
 		new_pos = limit;
 	} else {
 		new_pos = pos;
 	}
 
 	box->cursor.x = new_pos;
-	return(0);
+	return 0;
 }
 
 static int _cmdbox_resize(struct widget *widget)
 {
-	if(!widget) {
-		return(-EINVAL);
+	if (!widget) {
+		return -EINVAL;
 	}
 
-	widget->height = 1;
+	widget->height = 2;
 	return 0;
 }
 
@@ -146,9 +162,11 @@ static int _cmdbox_redraw(struct widget *widget)
 {
 	struct cmdbox *box;
 	int dist;
+	int num_lines;
+	int y;
 
-	if(!widget) {
-		return(-EINVAL);
+	if (!widget) {
+		return -EINVAL;
 	}
 
 	box = (struct cmdbox*)widget;
@@ -161,12 +179,25 @@ static int _cmdbox_redraw(struct widget *widget)
 		box->viewport.x += dist;
 	}
 	if ((dist = box->cursor.y - box->viewport.y) < 0 ||
-	    (dist = box->cursor.y - box->viewport.y - widget->height) > 0) {
+	    (dist = box->cursor.y - box->viewport.y - widget->height + 1) > 0) {
 		box->viewport.y += dist;
 	}
+
 	fprintf(stderr, "Viewport @ (%d,%d)\n", box->viewport.x, box->viewport.y);
-	mvwprintw(widget->window, widget->y, widget->x,
-		  "%s", string_get_data(box->buffer) + box->viewport.x);
+	num_lines = multistring_get_lines(box->buffer);
+
+	fprintf(stderr, "for (y = 0; y < %d && box->viewport.y + y < %d; y++) { ... }\n",
+		widget->height, num_lines);
+
+	for (y = 0; y < widget->height && box->viewport.y + y < num_lines; y++) {
+		const char *line_data;
+
+		line_data = multistring_line_get_data(box->buffer, box->viewport.y + y);
+		mvwprintw(widget->window, widget->y + y, widget->x,
+			  "%.*s", widget->width, line_data + box->viewport.x);
+		fprintf(stderr, "mvwprintw(%p, %d, %d, \"%%.*s\", %d, \"%s\");\n", (void*)widget->window, widget->y + y, widget->x, widget->width,
+			line_data + box->viewport.x);
+	}
 
 	if(box->highlight_len > 0) {
 		int highlight_x;
@@ -194,7 +225,7 @@ static int _cmdbox_redraw(struct widget *widget)
 		}
 	}
 
-	move(widget->y + box->cursor.y - box->viewport.y, widget->x + box->cursor.x - box->viewport.y);
+	move(widget->y + box->cursor.y - box->viewport.y, widget->x + box->cursor.x - box->viewport.x);
 
 	return(0);
 }
@@ -209,7 +240,7 @@ static int _cmdbox_free(struct widget *widget)
 
 	box = (struct cmdbox*)widget;
 
-	string_free(&(box->buffer));
+	multistring_free(&(box->buffer));
 	memset(box, 0, sizeof(*box));
 	free(box);
 
@@ -362,7 +393,7 @@ int cmdbox_new(struct cmdbox **cmdbox)
 	/* don't vertically expand cmdboxes */
 	((struct widget*)box)->attrs &= ~UI_ATTR_VEXPAND;
 
-	if(string_new(&(box->buffer)) < 0) {
+	if (multistring_new(&(box->buffer)) < 0) {
 		free(box);
 		return(-ENOMEM);
 	}
@@ -455,13 +486,13 @@ int cmdbox_set_text(struct cmdbox *box, const char *text)
 	return(0);
 }
 
-const char* cmdbox_get_text(struct cmdbox *box)
+char* cmdbox_get_text(struct cmdbox *box)
 {
 	if(!box) {
 		return(NULL);
 	}
 
-	return(string_get_data(box->buffer));
+	return (multistring_get_data(box->buffer));
 }
 
 int cmdbox_get_length(struct cmdbox *box)
@@ -470,5 +501,5 @@ int cmdbox_get_length(struct cmdbox *box)
 		return(-EINVAL);
 	}
 
-	return(string_get_length(box->buffer));
+	return(multistring_get_length(box->buffer));
 }
