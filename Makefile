@@ -1,6 +1,6 @@
 OBJECTS = src/main.o src/config.o src/file.o src/buffer.o src/string.o src/kbdwidget.o \
 	  src/window.o src/cmdbox.o src/editor.o src/vbox.o src/textview.o src/widget.o \
-	  src/container.o
+	  src/container.o src/multistring.o
 OUTPUT = e
 PHONY = clean install
 
