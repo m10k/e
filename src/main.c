@@ -9,18 +9,17 @@
 static struct option _cmd_opts[] = {
 	{ "help", no_argument, 0, 'h' },
 	{ "readonly", no_argument, 0, 'r' },
-	{ "file", required_argument, 0, 'f' },
 	{ 0, 0, 0, 0 }
 };
 
 static void _print_usage(const char *argv0)
 {
-	printf("Usage: %s [OPTIONS]\n"
+	printf("Usage: %s [OPTIONS] filename\n"
 	       "\n"
 	       "Options:\n"
 	       " -h  --help          Display this help\n"
-	       " -r  --readonly      Open file read-only\n"
-	       " -f  --file <path>   Open file <path>\n", argv0);
+	       " -r  --readonly      Open file read-only\n",
+	       argv0);
 	return;
 }
 
@@ -42,10 +41,6 @@ int main(int argc, char *argv[])
 			_print_usage(argv[0]);
 			return(1);
 
-		case 'f':
-			filename = optarg;
-			break;
-
 		case 'r':
 			readonly = 1;
 			break;
@@ -60,11 +55,12 @@ int main(int argc, char *argv[])
 		}
 	} while(err >= 0);
 
-	if(!filename) {
-		fprintf(stderr, "Need a filename\n");
-		return(1);
+	if (optind >= argc) {
+		_print_usage(argv[0]);
+		return 1;
 	}
 
+	filename = argv[optind];
 	err = editor_new(&editor);
 
 	if(err < 0) {
