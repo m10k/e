@@ -5,6 +5,7 @@
 #include "editor.h"
 #include "buffer.h"
 #include "string.h"
+#include "multistring.h"
 #include "ui.h"
 
 /* FIXME: Variables should be stored in a hashmap once we have one */
@@ -69,9 +70,9 @@ static int _selection_start_change(struct widget *widget,
 {
 	struct cmdbox *box;
 	struct editor *editor;
-	struct string *buffer;
+	struct multistring *buffer;
 	struct telex *telex;
-	const char *expr_ptr;
+	char *expr;
 	struct telex_error *errors;
 	int err;
 
@@ -81,7 +82,7 @@ static int _selection_start_change(struct widget *widget,
 
 	box = (struct cmdbox*)widget;
 	editor = (struct editor*)user_data;
-	buffer = (struct string*)data;
+	buffer = (struct multistring*)data;
 
 	/* turn off highlight, if any */
 	cmdbox_highlight(box, UI_COLOR_DELETION, 0, 0);
@@ -94,8 +95,11 @@ static int _selection_start_change(struct widget *widget,
 		return 0;
 	}
 
-	expr_ptr = string_get_data(buffer);
-	err = telex_parse(&telex, expr_ptr, &errors);
+	if (!(expr = multistring_get_data(buffer))) {
+		return 0;
+	}
+
+	err = telex_parse(&telex, expr, &errors);
 
 	if(err) {
 		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
@@ -118,6 +122,7 @@ static int _selection_start_change(struct widget *widget,
 		}
 	}
 
+	free(expr);
 	return(0);
 }
 
@@ -127,9 +132,9 @@ static int _selection_end_change(struct widget *widget,
 {
 	struct cmdbox *box;
 	struct editor *editor;
-	struct string *buffer;
+	struct multistring *buffer;
 	struct telex *telex;
-	const char *expr_ptr;
+	char *expr;
 	struct telex_error *errors;
 	int err;
 
@@ -139,7 +144,7 @@ static int _selection_end_change(struct widget *widget,
 
 	box = (struct cmdbox*)widget;
 	editor = (struct editor*)user_data;
-	buffer = (struct string*)data;
+	buffer = (struct multistring*)data;
 
 	/* turn off highlight, if any */
 	cmdbox_highlight(box, UI_COLOR_DELETION, 0, 0);
@@ -152,8 +157,11 @@ static int _selection_end_change(struct widget *widget,
 		return 0;
 	}
 
-	expr_ptr = string_get_data(buffer);
-	err = telex_parse(&telex, expr_ptr, &errors);
+	if (!(expr = multistring_get_data(buffer))) {
+		return 0;
+	}
+
+	err = telex_parse(&telex, expr, &errors);
 
 	if (err) {
 		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
@@ -176,6 +184,7 @@ static int _selection_end_change(struct widget *widget,
 		}
 	}
 
+	free(expr);
 	return 0;
 }
 
@@ -206,7 +215,7 @@ static int _oinsert_requested(struct widget *widget,
 {
 	struct cmdbox *box;
 	struct editor *editor;
-	const char *insertion;
+	char *insertion;
 	const char *new_pos;
 	int err;
 
@@ -227,13 +236,14 @@ static int _oinsert_requested(struct widget *widget,
 	if ((err = buffer_overwrite(editor->buffer, insertion, editor->sel_start,
 				    editor->sel_end, &new_pos)) < 0) {
 		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
-		return 0;
+	} else {
+		_advance_selection(editor, new_pos);
+
+		cmdbox_clear(box);
+		widget_redraw((struct widget*)editor->window);
 	}
 
-	_advance_selection(editor, new_pos);
-
-	cmdbox_clear(box);
-	widget_redraw((struct widget*)editor->window);
+	free(insertion);
 
 	return 0;
 }
@@ -244,7 +254,7 @@ static int _insert_requested(struct widget *widget,
 {
 	struct cmdbox *box;
 	struct editor *editor;
-	const char *insertion;
+	char *insertion;
 	const char *new_pos;
 	int err;
 
@@ -266,14 +276,15 @@ static int _insert_requested(struct widget *widget,
 	insertion = cmdbox_get_text(box);
 	if ((err = buffer_insert(editor->buffer, insertion, editor->sel_start, &new_pos)) < 0) {
 		fprintf(stderr, "Could not insert text: %s [%d]\n", strerror(-err), -err);
-		return 0;
+	} else {
+		/* Advance selection so the user can insert more text */
+		_advance_selection(editor, new_pos);
+
+		cmdbox_clear(box);
+		widget_redraw((struct widget*)editor->window);
 	}
 
-	/* Advance selection so the user can insert more text */
-	_advance_selection(editor, new_pos);
-
-	cmdbox_clear(box);
-	widget_redraw((struct widget*)editor->window);
+	free(insertion);
 
 	return 0;
 }
@@ -284,7 +295,7 @@ static int _write_requested(struct widget *widget,
 {
 	struct cmdbox *box;
 	struct editor *editor;
-	const char *var_name;
+	char *var_name;
 	const char *var_value;
 	const char *new_pos;
 	int err;
@@ -308,22 +319,21 @@ static int _write_requested(struct widget *widget,
 	if (editor_get_var(editor, var_name, &var_value) < 0) {
 		fprintf(stderr, "No variable \"%s\"\n", var_name);
 		cmdbox_highlight(box, UI_COLOR_DELETION, 0, strlen(var_name));
-		return 0;
+	} else {
+		fprintf(stderr, "Inserting variable \"%s\" into buffer\n", var_name);
+		if ((err = buffer_insert(editor->buffer, var_value, editor->sel_start, &new_pos)) < 0) {
+			fprintf(stderr, "Could not insert variable \"%s\": %s [%d]\n",
+				var_name, strerror(-err), -err);
+			cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+		} else {
+			_advance_selection(editor, new_pos);
+
+			cmdbox_clear(box);
+			widget_redraw((struct widget*)editor->window);
+		}
 	}
 
-	fprintf(stderr, "Inserting variable \"%s\" into buffer\n", var_name);
-	if ((err = buffer_insert(editor->buffer, var_value, editor->sel_start, &new_pos)) < 0) {
-		fprintf(stderr, "Could not insert variable \"%s\": %s [%d]\n",
-			var_name, strerror(-err), -err);
-		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
-		return 0;
-	}
-
-	_advance_selection(editor, new_pos);
-
-	cmdbox_clear(box);
-	widget_redraw((struct widget*)editor->window);
-
+	free(var_name);
 	return 0;
 }
 
@@ -335,7 +345,7 @@ static int _read_requested(struct widget *widget,
 	struct editor *editor;
 	const char *substring;
 	size_t substring_len;
-	const char *var;
+	char *var;
 	int err;
 
 	box = (struct cmdbox*)widget;
@@ -350,6 +360,7 @@ static int _read_requested(struct widget *widget,
         }
 
 	var = cmdbox_get_text(box);
+	err = 0;
 
 	/*
 	 * Read the data that the selection points to and save it in a
@@ -359,19 +370,20 @@ static int _read_requested(struct widget *widget,
 	if ((err = buffer_get_substring(editor->buffer, editor->sel_start, editor->sel_end,
 					&substring, &substring_len)) < 0) {
 		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
-		return err;
+	} else {
+		fprintf(stderr, "Setting variable \"%s\" to \"%s\"\n", var, substring);
+
+		if ((err = editor_set_var(editor, var, substring)) < 0) {
+			free((void*)substring);
+			cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
+		} else {
+			cmdbox_clear(box);
+		}
 	}
 
-	fprintf(stderr, "Setting variable \"%s\" to \"%s\"\n", var, substring);
+	free(var);
 
-	if ((err = editor_set_var(editor, var, substring)) < 0) {
-		free((void*)substring);
-		cmdbox_highlight(box, UI_COLOR_DELETION, 0, -1);
-		return err;
-	}
-
-	cmdbox_clear(box);
-	return 0;
+	return err;
 }
 
 static int _save_requested(struct widget *widget,
