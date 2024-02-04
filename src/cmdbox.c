@@ -360,6 +360,10 @@ static int _cmdbox_key_pressed(struct widget *widget, void *user_data, void *eve
 			break;
 
 		case 'J':
+			_box_insert_at_cursor(box, '\n');
+			break;
+
+		case 'P':
 			widget_emit_signal(widget, "insert_requested", box->buffer);
 			break;
 
