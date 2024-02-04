@@ -75,6 +75,8 @@ int window_adjust_size(struct window *window)
 int _window_resize(struct widget *widget)
 {
 	struct window *window;
+	int max_width;
+	int max_height;
 
 	if(!widget) {
 		return(-EINVAL);
@@ -82,8 +84,9 @@ int _window_resize(struct widget *widget)
 
 	window = (struct window*)widget;
 
-	widget->width = stdscr->_maxx + 1;
-	widget->height = stdscr->_maxy + 1;
+	getmaxyx(stdscr, max_height, max_width);
+	widget->width = max_width;
+	widget->height = max_height;
 
 	if(window->child) {
 		window->child->x = 0;
@@ -210,6 +213,8 @@ static int _initialize_curses(void)
 int window_new(struct window **window)
 {
 	struct window *wind;
+	int max_width;
+	int max_height;
 
 	if(!window) {
 		return(-EINVAL);
@@ -229,8 +234,9 @@ int window_new(struct window **window)
 
 	container_init((struct container*)wind);
 
-	((struct widget*)wind)->width = stdscr->_maxx + 1;
-	((struct widget*)wind)->height = stdscr->_maxy + 1;
+	getmaxyx(stdscr, max_height, max_width);
+	((struct widget*)wind)->width = max_width;
+	((struct widget*)wind)->height = max_height;
 
 	((struct widget*)wind)->input = _window_input;
 	((struct widget*)wind)->resize = _window_resize;
