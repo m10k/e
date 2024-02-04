@@ -2,11 +2,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <getopt.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include "editor.h"
 
 #define SHORTOPTS "f:hr"
 
 static struct option _cmd_opts[] = {
+	{ "debug", no_argument, 0, 'd' },
 	{ "help", no_argument, 0, 'h' },
 	{ "readonly", no_argument, 0, 'r' },
 	{ 0, 0, 0, 0 }
@@ -17,10 +20,35 @@ static void _print_usage(const char *argv0)
 	printf("Usage: %s [OPTIONS] filename\n"
 	       "\n"
 	       "Options:\n"
+	       " -d  --debug         Print debug output to stderr\n"
 	       " -h  --help          Display this help\n"
 	       " -r  --readonly      Open file read-only\n",
 	       argv0);
 	return;
+}
+
+static int _disable_debug_output(void)
+{
+	int err;
+	int devnull;
+
+	if ((devnull = open("/dev/null", O_WRONLY)) < 0) {
+		err = -errno;
+		perror("open");
+		return err;
+	}
+
+	if (close(2) < 0) {
+		err = -errno;
+		perror("close");
+	} else if (dup2(devnull, 2) < 0) {
+		err = -errno;
+	} else {
+		err = 0;
+	}
+
+	close(devnull);
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -28,6 +56,7 @@ int main(int argc, char *argv[])
 	struct editor *editor;
 	const char *filename;
 	int readonly;
+	int debug;
 	int err;
 
 	filename = NULL;
@@ -45,6 +74,10 @@ int main(int argc, char *argv[])
 			readonly = 1;
 			break;
 
+		case 'd':
+			debug = 1;
+			break;
+
 		case '?':
 			fprintf(stderr, "Unrecognized parameter `%s'\n", optarg);
 			return(1);
@@ -58,6 +91,10 @@ int main(int argc, char *argv[])
 	if (optind >= argc) {
 		_print_usage(argv[0]);
 		return 1;
+	}
+
+	if (!debug) {
+		_disable_debug_output();
 	}
 
 	filename = argv[optind];
