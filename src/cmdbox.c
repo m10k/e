@@ -13,6 +13,7 @@ struct pos {
 struct cmdbox {
 	struct kbd_widget _parent;
 	struct multistring *buffer;
+	char *print_buffer;
 
 	struct pos cursor;
 	struct pos viewport;
@@ -126,11 +127,23 @@ static int _box_set_cursor(struct cmdbox *box, const int pos)
 
 static int _cmdbox_resize(struct widget *widget)
 {
+	struct cmdbox *box;
+
 	if (!widget) {
 		return -EINVAL;
 	}
 
+	box = (struct cmdbox*)widget;
+
 	widget->height = 2;
+
+	if (box->print_buffer) {
+		free(box->print_buffer);
+	}
+	if (!(box->print_buffer = calloc(1, widget->width + 1))) {
+		fprintf(stderr, "Warning: Could not reallocate print buffer\n");
+	}
+
 	return 0;
 }
 
@@ -158,11 +171,69 @@ static int _cmdbox_blank(struct widget *widget)
 	return 0;
 }
 
+static int _printable_string(const char *src, size_t src_len, char *dst, size_t dst_size)
+{
+	size_t src_off;
+	size_t dst_off;
+
+	for (src_off = 0, dst_off = 0; src_off < src_len && dst_off < dst_size; src_off++) {
+		int written;
+		int tab_width;
+
+		switch (src[src_off]) {
+		case '\n':
+			break;
+
+		case '\t':
+			tab_width = 8 - (int)(src_off & 0x7);
+			written = snprintf(dst + dst_off, dst_size - dst_off,
+					   "%*s", tab_width, " ");
+
+			if (written < 0) {
+				return -errno;
+			}
+
+			dst_off += written;
+			break;
+
+		default:
+			dst[dst_off++] = src[src_off++];
+			break;
+		}
+	}
+
+	return (int)dst_off;
+}
+
+static int _get_real_cursor_pos(const char *src,
+				const int cursor)
+{
+	int real_pos;
+	int i;
+
+	for (i = real_pos = 0; i < cursor && i < strlen(src); i++) {
+		int tab_width;
+
+		switch (src[i]) {
+		case '\t':
+			tab_width = 8 - (real_pos & 0x7);
+			real_pos += tab_width;
+			break;
+
+		default:
+			real_pos++;
+		}
+	}
+
+	return real_pos;
+}
+
 static int _cmdbox_redraw(struct widget *widget)
 {
 	struct cmdbox *box;
 	int dist;
 	int num_lines;
+	int real_cursor_x;
 	int y;
 
 	if (!widget) {
@@ -193,10 +264,18 @@ static int _cmdbox_redraw(struct widget *widget)
 		const char *line_data;
 
 		line_data = multistring_line_get_data(box->buffer, box->viewport.y + y);
+	        _printable_string(line_data + box->viewport.x,
+				  strlen(line_data) - box->viewport.x,
+				  box->print_buffer,
+				  widget->width);
 		mvwprintw(widget->window, widget->y + y, widget->x,
-			  "%.*s", widget->width, line_data + box->viewport.x);
+			  "%.*s", widget->width, line_data);
 		fprintf(stderr, "mvwprintw(%p, %d, %d, \"%%.*s\", %d, \"%s\");\n", (void*)widget->window, widget->y + y, widget->x, widget->width,
 			line_data + box->viewport.x);
+
+		if (y == box->cursor.y) {
+			real_cursor_x = _get_real_cursor_pos(line_data, box->cursor.x) - box->viewport.x;
+		}
 	}
 
 	if(box->highlight_len > 0) {
@@ -225,7 +304,8 @@ static int _cmdbox_redraw(struct widget *widget)
 		}
 	}
 
-	move(widget->y + box->cursor.y - box->viewport.y, widget->x + box->cursor.x - box->viewport.x);
+	move(widget->y + box->cursor.y - box->viewport.y,
+	     widget->x + real_cursor_x);
 
 	return(0);
 }
@@ -357,6 +437,10 @@ static int _cmdbox_key_pressed(struct widget *widget, void *user_data, void *eve
 
 		case 'H':
 			_box_remove_cursor_left(box);
+			break;
+
+		case 'I':
+			_box_insert_at_cursor(box, '\t');
 			break;
 
 		case 'J':
