@@ -13,6 +13,7 @@ struct buffer {
 	struct file *file;
 	char *data;
 	size_t size;
+	int dirty;
 };
 
 struct line {
@@ -154,11 +155,23 @@ int buffer_close(struct buffer **buffer)
 
 int buffer_save(struct buffer *buffer)
 {
-        if(!buffer) {
-		return(-EINVAL);
+	int err;
+
+	if(!buffer) {
+		return -EINVAL;
 	}
 
-	return(file_write(buffer->file, buffer->data));
+	if (!buffer->dirty) {
+		return 0;
+	}
+
+	err = file_write(buffer->file, buffer->data);
+
+	if (!err) {
+		buffer->dirty = 0;
+	}
+
+	return err;
 }
 
 int buffer_append(struct buffer *buffer, char chr)
@@ -184,6 +197,7 @@ int buffer_append(struct buffer *buffer, char chr)
 
 	buffer->data = new_data;
 	buffer->size = new_size;
+	buffer->dirty = 1;
 
 	return(0);
 }
@@ -793,6 +807,8 @@ int buffer_insert(struct buffer *buffer, const char *insertion, struct telex *st
 		*new_end = new_data + insertion_offset + insertion_len;
 	}
 
+	buffer->dirty = 1;
+
 	return 0;
 }
 
@@ -847,6 +863,8 @@ int buffer_overwrite(struct buffer *buffer, const char *insertion, struct telex 
 	if (new_end) {
 		*new_end = buffer->data + offset_start + src_size;
 	}
+
+	buffer->dirty = 1;
 
 	return 0;
 }
@@ -907,6 +925,7 @@ int buffer_erase(struct buffer *buffer, struct telex *start, struct telex *end)
 		buffer->data = new_data;
 		buffer->size = new_size;
 	}
+	buffer->dirty = 1;
 
 	return 0;
 }
