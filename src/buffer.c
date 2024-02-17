@@ -817,10 +817,10 @@ int buffer_overwrite(struct buffer *buffer, const char *insertion, struct telex 
 {
 	const char *dst_start;
 	const char *dst_end;
-	size_t offset_start;
-	size_t offset_end;
-	size_t src_size;
-	size_t dst_size;
+	ssize_t offset_start;
+	ssize_t offset_end;
+	ssize_t src_size;
+	ssize_t dst_size;
 	ssize_t required_space;
 
 	/* if end was specified, overwrite only from start to end, otherwise overwrite as much as needed */
@@ -835,13 +835,13 @@ int buffer_overwrite(struct buffer *buffer, const char *insertion, struct telex 
 		return -ERANGE;
 	}
 
-	offset_start = (size_t)(dst_start - buffer->data);
-	offset_end = (size_t)(dst_end - buffer->data);
-	src_size = strlen(insertion);
-	dst_size = (size_t)(dst_end - dst_start);
+	offset_start = (ssize_t)(dst_start - buffer->data);
+	offset_end = (ssize_t)(dst_end - buffer->data);
+	src_size = (ssize_t)strlen(insertion);
+	dst_size = (ssize_t)(dst_end - dst_start);
 	required_space = src_size - dst_size;
 
-	if (required_space > 0) {
+	if (required_space > 0 || (required_space < 0 && end)) {
 		char *new_data;
 
 		if (!(new_data = realloc(buffer->data, buffer->size + required_space))) {
